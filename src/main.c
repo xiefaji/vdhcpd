@@ -66,6 +66,7 @@ PRIVATE void signal_callback(int num)
         exit(-1);
         break;
     case SIGUSR1:
+        vdhcpd_set_reload();
         break;
     case SIGUSR2:
         break;

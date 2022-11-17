@@ -112,7 +112,7 @@ ALWAYS_INLINE int ParseUIntNums(const char *InBuf,unsigned int dataArry[],const 
 ALWAYS_INLINE xVLANBITMAP *GetVLAN_BITMASK(const char *pVLANBuffer,const size_t buflen,int default_vlan)
 {
     xVLANBITMAP *vlan_bitmask = (xVLANBITMAP*)xMALLOC(sizeof(xVLANBITMAP));
-    if (strstr(pVLANBuffer,"any")) {
+    if (strstr(pVLANBuffer,"any") || !default_vlan) {
         BITMASK_ONE(vlan_bitmask);//all
         return vlan_bitmask;
     }

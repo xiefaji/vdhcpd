@@ -6,7 +6,7 @@ PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
-    vdm->sockfd_main = create_udp_socket(DEFAULT_DHCP_UDP_PORT, 1, 3, 0, NULL);
+    vdm->sockfd_main = create_udp_socket(DEFAULT_DHCP_UDP_PORT, 1, 1, 0, NULL);
     if (vdm->sockfd_main < 0) {
         x_log_warn("%s:%d 创建SOCKET失败[MAIN].", __FUNCTION__, __LINE__);
         exit(0);
@@ -34,12 +34,19 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
     for (int idx = 0; idx < receive_bucket->count; ++idx) {
         struct mmsghdr *packets = &receive_bucket->receives.packets[idx];
-        unsigned char *data = packets->msg_hdr.msg_iov->iov_base;
+        ipcshare_hdr_t *ipcsharehdr= packets->msg_hdr.msg_iov->iov_base;
         unsigned int data_len = packets->msg_len;
 
-        ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)data;
+        switch (ipcsharehdr->process) {
+        case DEFAULT_DHCPv4_PROCESS:
 
-
+            break;
+        case DEFAULT_DHCPv6_PROCESS:
+            break;
+        default:
+            x_log_warn("%s : %d 未识别Processl数据类型[%u][%u][%d].", __FUNCTION__, __LINE__, ipcsharehdr->process, errno, receive_bucket->count);
+            break;
+        }
     }
     return 0;
 }

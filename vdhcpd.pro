@@ -41,6 +41,7 @@ HEADERS += \
     src/share/misc.h \
     src/share/types.h \
     src/share/xlog.h \
+    src/dhcpd/acl.h \
     src/dhcpd/config.h \
     src/dhcpd/dhcpd.h \
     src/dhcpd/dhcpv4.h \
@@ -68,6 +69,7 @@ SOURCES += \
     src/share/magic.c \
     src/share/misc.c \
     src/share/xlog.c \
+    src/dhcpd/acl.c \
     src/dhcpd/api.c \
     src/dhcpd/dhcpd.c \
     src/dhcpd/local.c \

@@ -6,7 +6,7 @@ PUBLIC int relay4_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
-    vdm->sockfd_relay4 = create_udp_socket(DHCPV4_SERVER_PORT, 1, 3, 0, NULL);
+    vdm->sockfd_relay4 = create_udp_socket(DHCPV4_SERVER_PORT, 1, 1, 0, NULL);
     if (vdm->sockfd_relay4 < 0) {
         x_log_warn("%s:%d 创建SOCKET失败[MAIN].", __FUNCTION__, __LINE__);
         exit(0);
