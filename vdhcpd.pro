@@ -42,7 +42,12 @@ HEADERS += \
     src/share/types.h \
     src/share/xlog.h \
     src/dhcpd/config.h \
-    src/dhcpd/dhcpd.h
+    src/dhcpd/dhcpd.h \
+    src/dhcpd/dhcpv4.h \
+    src/dhcpd/dhcpv6.h \
+    src/dhcpd/ipcshare.h \
+    src/dhcpd/server.h \
+    src/dhcpd/staticlease.h
 
 SOURCES += \
     src/public/receive.c \
@@ -63,5 +68,11 @@ SOURCES += \
     src/share/magic.c \
     src/share/misc.c \
     src/share/xlog.c \
+    src/dhcpd/api.c \
     src/dhcpd/dhcpd.c \
+    src/dhcpd/local.c \
+    src/dhcpd/relay4.c \
+    src/dhcpd/relay6.c \
+    src/dhcpd/server.c \
+    src/dhcpd/staticlease.c \
     src/main.c

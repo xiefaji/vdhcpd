@@ -1,7 +1,7 @@
 #ifndef _dhcp_config_h
 #define _dhcp_config_h
 #define PACKAGE_NAME "DHCP Daemon"
-#define PACKAGE_VERSION "2022111502"
+#define PACKAGE_VERSION "2022111701"
 #define PACKAGE_MODULES "DHCP服务端"
 
 //默认配置路径
@@ -9,8 +9,10 @@
 #define PATH_LOGFILE  "/var/log/xs/vdhcpd.log"
 #define PATH_LOCKFILE "/var/run/xsdhcp.lock"
 #define PATH_PIDFILE "/var/run/xsdhcp.pid"
+#define DEFAULT_DBNAME "xspeeder"
 
 #include "share/defines.h"
+#include "share/types.h"
 #include "share/inifile/inifile.h"
 
 typedef struct {
@@ -23,7 +25,6 @@ typedef struct {
     char leasefile[MAXNAMELEN+1];//接入服务实时租约信息[更新频率:5s]
 } path_cfg_t;
 PUBLIC_DATA path_cfg_t path_cfg;
-
 ALWAYS_INLINE void path_cfg_init(const char *cfgfile)
 {
     PRIVATE int already_load = 0;
@@ -37,4 +38,20 @@ ALWAYS_INLINE void path_cfg_init(const char *cfgfile)
     }
 }
 
+typedef struct {
+    char ip[MINNAMELEN+1];
+    u16 port;//hostbit
+    char user[MINNAMELEN+1];
+    char pass[MINNAMELEN+1];
+    char dbname[MINNAMELEN+1];
+} vradiusd_cfg_mysql_t;
+ALWAYS_INLINE void vradiusd_cfg_get_mysql(vradiusd_cfg_mysql_t *cfg_mysql)
+{
+    BZERO(cfg_mysql, sizeof(vradiusd_cfg_mysql_t));
+    read_profile_string("mysql", "ip", cfg_mysql->ip, MINNAMELEN, "127.0.0.1", path_cfg.cfgfile);
+    cfg_mysql->port = read_profile_int("mysql", "port", 8306, path_cfg.cfgfile);
+    read_profile_string("mysql", "user", cfg_mysql->user, MINNAMELEN, "root", path_cfg.cfgfile);
+    read_profile_string("mysql", "pass", cfg_mysql->pass, MINNAMELEN, "tXkj-8002-vErygood", path_cfg.cfgfile);
+    read_profile_string("mysql", "dbname", cfg_mysql->dbname, MINNAMELEN, DEFAULT_DBNAME, path_cfg.cfgfile);
+}
 #endif
