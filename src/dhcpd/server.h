@@ -27,13 +27,15 @@ typedef struct {
     xVLANBITMAP *pQINQ;
 
     //线路配置信息
-    volatile struct {
+    struct {
         u32 driveid;
         char ifname[MINNAMELEN+1];
         u32 networkcard;
         u16 groupid;
         u16 kind;
         u16 mtu;
+        mac_address_t macaddr;
+        ip4_address_t ipaddr;
     } iface;
 
     //DHCPV4配置

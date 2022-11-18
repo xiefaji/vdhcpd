@@ -2,7 +2,9 @@
 
 PUBLIC vdhcpd_main_t vdhcpd_main;
 PUBLIC time_t global_time;
+PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm);
 PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash);
+PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh);
 PRIVATE vdhcpd_cfg_t *vdhcpd_cfg_reload();
 PRIVATE void vdhcpd_cfg_release(vdhcpd_cfg_t *cfg_main);
 PRIVATE void vdhcpd_cfg_recycle(vdhcpd_cfg_t *cfg_main, trash_queue_t *pRecycleTrash);
@@ -28,9 +30,14 @@ PUBLIC int vdhcpd_init()
     database_connect();
 
     vdm->sockfd_main = -1;
+    vdm->sockfd_raw = -1;
     vdm->sockfd_relay4 = -1;
     vdm->sockfd_relay6 = -1;
     vdm->sockfd_api = -1;
+    vdm->sockfd_webaction = -1;
+    stats_main_init(&vdm->stats_main);
+    db_process_init(&vdm->db_process);
+    vdm->filter_tree = macaddr_filter_init(path_cfg.filterfile);
     return 0;
 }
 
@@ -40,15 +47,21 @@ PUBLIC int vdhcpd_release()
 
     if (vdm->sockfd_main > 0) close(vdm->sockfd_main);
     vdm->sockfd_main = -1;
+    if (vdm->sockfd_raw > 0) close(vdm->sockfd_raw);
+    vdm->sockfd_raw = -1;
     if (vdm->sockfd_relay4 > 0) close(vdm->sockfd_relay4);
     vdm->sockfd_relay4 = -1;
     if (vdm->sockfd_relay6 > 0) close(vdm->sockfd_relay6);
     vdm->sockfd_relay6 = -1;
     if (vdm->sockfd_api  > 0) close(vdm->sockfd_api);
     vdm->sockfd_api = -1;
+    if (vdm->sockfd_webaction > 0) close(vdm->sockfd_webaction);
+    vdm->sockfd_webaction = -1;
 
     vdhcpd_cfg_release(vdm->cfg_main);
-
+    stats_main_release(&vdm->stats_main);
+    db_process_destroy(&vdm->db_process);
+    macaddr_filter_release(vdm->filter_tree);
     MyDBOp_Destroy(&xHANDLE_Mysql);
     return 0;
 }
@@ -60,7 +73,20 @@ PUBLIC int vdhcpd_shutdown()
     shutdown(vdm->sockfd_relay4, SHUT_RDWR);
     shutdown(vdm->sockfd_relay6, SHUT_RDWR);
     shutdown(vdm->sockfd_api, SHUT_RDWR);
+    shutdown(vdm->sockfd_webaction, SHUT_RDWR);
     return 0;
+}
+
+PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
+{
+    db_event_t *db_event = db_event_init(DPF_NORMAL);
+    char sql[MINBUFFERLEN+1]={0};
+    int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbserverinfo (`server`,`ver`,`start`,`pid`) "
+                                          "VALUES ('xsdhcp','"PACKAGE_VERSION"',%u,%u) "
+                                          "ON DUPLICATE KEY UPDATE `ver`='"PACKAGE_VERSION"',`start`=%u,`pid`=%u;",
+                       (u32)time(NULL), getpid(), (u32)time(NULL), getpid());
+    db_event->sql = strndup(sql, len);
+    db_process_push_event(&vdm->db_process, db_event);
 }
 
 PUBLIC int vdhcpd_start()
@@ -72,8 +98,11 @@ PUBLIC int vdhcpd_start()
     assert(vdm->cfg_main);
 
     x_log_warn("%s Start. version[%s] pid[%d]...", PACKAGE_NAME"["PACKAGE_MODULES"]", PACKAGE_VERSION, getpid());
+    vdhcpd_starttime(vdm);
 
     xthread_create(&vdm->mtThread, "Maintain", vdm, NULL, vdhcpd_maintain, NULL, 0, 0);
+    xthread_create(&vdm->dbThread, "DB", vdm, NULL, vdhcpd_db_start, NULL, 0, 0);
+    xthread_create(&vdm->webThread, "WEB", vdm, webaction_init, webaction_start, NULL, 0, 0);
     xthread_create(&vdm->apiThread, "API", vdm, api_main_init, api_main_start, api_main_clean, 0, 0);
     xthread_create(&vdm->relay4Thread, "Relay4", vdm, relay4_main_init, relay4_main_start, relay4_main_clean, 0, 0);
     xthread_create(&vdm->relay6Thread, "Relay6", vdm, relay6_main_init, relay6_main_start, relay6_main_clean, 0, 0);
@@ -84,13 +113,8 @@ PUBLIC int vdhcpd_start()
 PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
-    PRIVATE unsigned int lasttick_mysql,last_rotate,last_update;
-
-    //数据库连接保活
-    if (CMP_COUNTER(lasttick_mysql, 60)) {
-        MyDBOp_Ping(&xHANDLE_Mysql);
-        SET_COUNTER(lasttick_mysql);
-    }
+    PRIVATE u32 last_rotate,last_update;
+    PRIVATE u32 last_modifytime;
 
     //日志文件句柄保活
     if (CMP_COUNTER(last_rotate, 60)) {
@@ -108,7 +132,49 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
         SET_COUNTER(last_update);
     }
 
-    return xTHREAD_DEFAULT_INTERVAL;
+    //通信数据过滤[MAC地址重载]
+    u32 current_modifytime=0;
+    get_file_modifytime(path_cfg.filterfile, &current_modifytime);
+    if (current_modifytime != last_modifytime) {
+        last_modifytime = current_modifytime;
+        struct key_tree *recycle_tree = vdm->filter_tree;
+        vdm->filter_tree = macaddr_filter_init(path_cfg.filterfile);
+        macaddr_filter_recycle(recycle_tree, pRecycleTrash);
+    }
+
+    stats_main_maintain(&vdm->stats_main, pRecycleTrash);//需要控制在每秒执行
+
+    return xTHREAD_DEFAULT_SECOND_INTERVAL;
+}
+
+PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
+{
+    vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
+    db_event_t *db_event = NULL;
+
+    PRIVATE unsigned int lasttick_mysql;;
+    //数据库连接保活
+    if (CMP_COUNTER(lasttick_mysql, 60)) {
+        MyDBOp_Ping(&xHANDLE_Mysql);
+        SET_COUNTER(lasttick_mysql);
+    }
+
+    u32 stattime;//确保不一直执行SQL
+    SET_COUNTER(stattime);
+    while (NULL != (db_event = db_process_pop_event(&vdm->db_process)) && !CMP_COUNTER(stattime, MIN_RELEASE_INTERVAL / 3)) {
+#ifdef CHECK_PERFORMANCE
+        struct timeval ticktime;
+        gettimeofday(&ticktime, NULL);
+#endif
+
+        if (db_event->sql) MyDBOp_ExecSQL_1(&xHANDLE_Mysql, db_event->sql);
+
+        db_event_release(db_event);
+#ifdef CHECK_PERFORMANCE
+        x_log_debug("%s : 性能测试[DB] delay[%.3f ms].", __FUNCTION__, get_delay(&ticktime));
+#endif
+    }
+    return xTHREAD_DEFAULT_SECOND_INTERVAL;
 }
 
 //配置加载

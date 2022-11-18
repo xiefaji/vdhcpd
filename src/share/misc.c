@@ -179,6 +179,37 @@ PUBLIC int create_udp_socket6(const unsigned short listenport, int local, int ti
     return sock;
 }
 
+PUBLIC int create_raw_socket(int timeout, int reuseport, const char *ifname)
+{
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+    if (sock < 0) {
+        x_log_warn("%s : 创建socket失败[%s].", __FUNCTION__, strerror(errno));
+        return -1;
+    }
+
+    int one = 1;
+    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
+
+    if (reuseport) {
+        one = 1;
+        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
+        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__, strerror(errno));
+    }
+
+    int on = 1;
+    if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        printf("Set IP_HDRINCL failed\n");
+    }
+
+    //设置绑定接口
+    if (ifname) socket_set_bind_interface(sock, ifname);
+
+    //设置接收/发送超时
+    socket_set_timeout(sock, timeout, timeout);
+    return sock;
+}
+
 //PUBLIC int create_udp_socket2(const unsigned short listenport, int local, int timeout, int us_timeout,int reuseport, const char *ifname)
 //{
 //    int sock=socket(AF_INET,SOCK_DGRAM,0);
@@ -564,4 +595,32 @@ PUBLIC int set_interface_up(const char *interface)
         return -1;
     }
     return 0;
+}
+
+PUBLIC int get_file_modifytime(const char *filename, unsigned int *modifytime)
+{
+    struct stat stats;
+    int result = stat(filename, &stats);
+    if (result != 0) {
+        //perror( "显示文件状态信息出错");
+        return -1;
+    } else {
+//        printf("文件创建时间: %s", ctime(&stats.st_ctime));
+//        printf("访问日期: %s", ctime(&stats.st_atime));
+//        printf("最后修改日期: %s", ctime(&stats.st_mtime));
+        *modifytime = stats.st_mtime;
+        return 0;
+    }
+}
+
+PUBLIC size_t hex2string(const unsigned char *src, const size_t src_len, char *dest, const size_t size, const char *default_value)
+{
+    if (src_len) {
+        size_t offset_src = 0, offset_dest = 0;
+        while (offset_src < src_len)
+            offset_dest += snprintf(&dest[offset_dest], size - offset_dest, "%02x", src[offset_src++]);
+        return offset_dest;
+    } else {
+        return snprintf(dest, size, "%s", default_value);
+    }
 }

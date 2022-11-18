@@ -38,4 +38,10 @@ PUBLIC_DATA void macaddr_acl_reload(void *cfg);
 PUBLIC_DATA void macaddr_acl_check(void *cfg);
 PUBLIC_DATA int macaddr_match(void *cfg, const u32 nID, const mac_address_t macaddr);
 PUBLIC_DATA int macaddr_match_str(void *cfg, const u32 nID, const char *macaddr_str);
+
+//通信数据过滤
+PUBLIC_DATA struct key_tree *macaddr_filter_init(const char *filename);
+PUBLIC_DATA void macaddr_filter_release(void *p);
+PUBLIC_DATA void macaddr_filter_recycle(void *p, trash_queue_t *pRecycleTrash);
+PUBLIC_DATA int macaddr_filter_match(struct key_tree *filter_tree, const mac_address_t macaddr);
 #endif

@@ -38,15 +38,21 @@ HEADERS += \
     src/share/defines.h \
     src/share/hash.h \
     src/share/magic.h \
+    src/share/md5.h \
     src/share/misc.h \
+    src/share/windivert.h \
     src/share/types.h \
     src/share/xlog.h \
     src/dhcpd/acl.h \
+    src/dhcpd/api.h \
     src/dhcpd/config.h \
+    src/dhcpd/db.h \
     src/dhcpd/dhcpd.h \
+    src/dhcpd/dhcppacket.h \
     src/dhcpd/dhcpv4.h \
     src/dhcpd/dhcpv6.h \
     src/dhcpd/ipcshare.h \
+    src/dhcpd/realtime.h \
     src/dhcpd/server.h \
     src/dhcpd/staticlease.h
 
@@ -67,14 +73,20 @@ SOURCES += \
     src/share/rbtree/tag_elem.c \
     src/share/hash.c \
     src/share/magic.c \
+    src/share/md5.c \
     src/share/misc.c \
+    src/share/windivert.c \
     src/share/xlog.c \
     src/dhcpd/acl.c \
     src/dhcpd/api.c \
     src/dhcpd/dhcpd.c \
+    src/dhcpd/dhcpv4.c \
+    src/dhcpd/dhcpv4relay.c \
+    src/dhcpd/dhcpv6.c \
+    src/dhcpd/dhcpv6relay.c \
     src/dhcpd/local.c \
-    src/dhcpd/relay4.c \
-    src/dhcpd/relay6.c \
+    src/dhcpd/realtime.c \
     src/dhcpd/server.c \
     src/dhcpd/staticlease.c \
+    src/dhcpd/webaction.c \
     src/main.c

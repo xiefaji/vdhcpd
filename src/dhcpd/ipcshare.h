@@ -7,9 +7,13 @@
 #define DEFAULT_CORE_UDP_PORT 6668/*xspeeder*/
 #define DEFAULT_DHCP_UDP_PORT 6667/**/
 #define DEFAULT_API_UDP_PORT 12000
+#define DEFAULT_WEBACTION_UDP_PORT 20000
 
 #define DEFAULT_DHCPv4_PROCESS  2101
 #define DEFAULT_DHCPv6_PROCESS  2102
+
+#define CODE_REQUEST    0
+#define CODE_REPLY  1
 
 typedef struct {
     u32 process;//对端进程代号

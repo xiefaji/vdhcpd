@@ -1,5 +1,7 @@
 #include "dhcpd.h"
 
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+//MAC地址控制
 PUBLIC macaddr_item_t *macaddr_item_init()
 {
     macaddr_item_t *macaddr_item = (macaddr_item_t *)xmalloc(sizeof(macaddr_item_t));
@@ -135,7 +137,7 @@ PUBLIC int macaddr_match(void *cfg, const u32 nID, const mac_address_t macaddr)
 
     macaddr_item_t tmp;
     BZERO(&tmp, sizeof(macaddr_item_t));
-    BCOPY(&macaddr, &tmp.key.macaddr, sizeof(macaddr_item_t));
+    BCOPY(&macaddr, &tmp.key.macaddr, sizeof(mac_address_t));
     struct key_node *knode = key_rbsearch(&macaddr_group->key_macaddrlist, tmp.key.key_value);
     return (knode && knode->data) ? 1:0;
 }
@@ -147,4 +149,69 @@ PUBLIC int macaddr_match_str(void *cfg, const u32 nID, const char *macaddr_str)
     BZERO(&macaddr, sizeof(mac_address_t));
     macaddress_parse(&macaddr, macaddr_str);
     return macaddr_match(cfg_main, nID, macaddr);
+}
+
+/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+//通信数据过滤
+PRIVATE void macaddr_filter_reload(struct key_tree *filter_tree, const char *filename)
+{
+    FILE *pFILE = fopen(filename, "r");
+    if (!pFILE) {
+        x_log_warn("%s:%d 文件[%s]打开失败[%s].", __FUNCTION__, __LINE__, filename, strerror(errno));
+        return;
+    }
+
+    char buffer[MINNAMELEN+1]={0};
+    while (fgets(buffer, MINNAMELEN, pFILE)) {
+        macaddr_item_t temp_item;
+        BZERO(&temp_item, sizeof(macaddr_item_t));
+        macaddress_parse(&temp_item.key.macaddr, buffer);
+        if (!temp_item.key.key_value)
+            continue;
+
+        macaddr_item_t *macaddr_item = macaddr_item_init();
+        macaddr_item->key.key_value = temp_item.key.key_value;
+        sprintf(macaddr_item->szName, "MAC地址日志过滤");
+        struct key_node *knode  = key_rbinsert(filter_tree, macaddr_item->key.key_value, macaddr_item);
+        if (knode) macaddr_item_release(macaddr_item);
+    }
+
+    fclose(pFILE);
+}
+
+PUBLIC struct key_tree *macaddr_filter_init(const char *filename)
+{
+    struct key_tree *filter_tree = (struct key_tree *)xmalloc(sizeof(struct key_tree));
+    key_tree_init(filter_tree);
+    macaddr_filter_reload(filter_tree, filename);
+    return filter_tree;
+}
+
+PUBLIC void macaddr_filter_release(void *p)
+{
+    struct key_tree *filter_tree = (struct key_tree *)p;
+    if (filter_tree) {
+        key_tree_destroy2(filter_tree, macaddr_item_release);
+        xfree(filter_tree);
+    }
+}
+
+PUBLIC void macaddr_filter_recycle(void *p, trash_queue_t *pRecycleTrash)
+{
+    struct key_tree *filter_tree = (struct key_tree *)p;
+    if (filter_tree) {
+        key_tree_nodes_recycle(filter_tree, pRecycleTrash, macaddr_item_recycle);
+        trash_queue_enqueue(pRecycleTrash, filter_tree);
+    }
+}
+
+PUBLIC int macaddr_filter_match(struct key_tree *filter_tree, const mac_address_t macaddr)
+{
+    if (!filter_tree)
+        return 0;
+    macaddr_item_t tmp;
+    BZERO(&tmp, sizeof(macaddr_item_t));
+    BCOPY(&macaddr, &tmp.key.macaddr, sizeof(mac_address_t));
+    struct key_node *knode = key_rbsearch(filter_tree, tmp.key.key_value);
+    return (knode && knode->data) ? 1:0;
 }

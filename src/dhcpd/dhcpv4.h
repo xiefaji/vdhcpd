@@ -46,6 +46,7 @@ enum dhcpv4_opt {
     DHCPV4_OPT_MESSAGE = 53,
     DHCPV4_OPT_SERVERID = 54,
     DHCPV4_OPT_REQOPTS = 55,
+    DHCPV4_OPT_MAXMESSAGE_SIZE = 57,
     DHCPV4_OPT_RENEW = 58,
     DHCPV4_OPT_REBIND = 59,
     DHCPV4_OPT_VENDOR_CLASS_IDENTIFIER = 60,
@@ -67,16 +68,16 @@ struct dhcpv4_message {
     u32 xid;
     u16 secs;
     u16 flags;
-    ip4_address_t ciaddr;
-    ip4_address_t yiaddr;
-    ip4_address_t siaddr;
-    ip4_address_t giaddr;
+    ip4_address_t ciaddr;//客户端请求IP
+    ip4_address_t yiaddr;//服务器分配给客户端IP
+    ip4_address_t siaddr;//服务器地址
+    ip4_address_t giaddr;//中继服务器地址
     u8 chaddr[16];
     char sname[64];
     char file[128];
     u8 options[312];
 };
-
+#define DHCPV4_FLAGS_BROADCAST(p) ((p)->flags & 0x80)
 //struct dhcpv4_auth_forcerenew {
 //    u8 protocol;
 //    u8 algorithm;

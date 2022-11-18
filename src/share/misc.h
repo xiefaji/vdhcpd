@@ -13,6 +13,7 @@ PUBLIC_DATA void socket_set_broadcast(int sock);
 PUBLIC_DATA void socket_set_timeout(int sock,int sendtimeout,int recvtimeout);
 PUBLIC_DATA int create_udp_socket(const unsigned short listenport, int local, int timeout, int reuseport, const char *ifname);
 PUBLIC_DATA int create_udp_socket6(const unsigned short listenport, int local, int timeout, int reuseport, const char *ifname);
+PUBLIC_DATA int create_raw_socket(int timeout, int reuseport, const char *ifname);
 //PUBLIC_DATA int create_udp_socket2(const unsigned short listenport, int local, int timeout, int us_timeout,int reuseport, const char *ifname);
 PUBLIC_DATA int set_interface_up(const char *interface);
 PUBLIC_DATA int create_interface_tun(const char *interface, int flags);
@@ -32,4 +33,6 @@ PUBLIC_DATA void remove_dir(const char *path_raw);
 PUBLIC_DATA void get_localtime(struct tm *st, time_t t);
 PUBLIC_DATA int standard_to_stamp(const char *str_time);
 PUBLIC_DATA int do_simple_command(char *cmd);
+PUBLIC_DATA int get_file_modifytime(const char *filename, unsigned int *modifytime);
+PUBLIC_DATA size_t hex2string(const unsigned char *src, const size_t src_len, char *dest, const size_t size, const char *default_value);
 #endif // _MISC_H

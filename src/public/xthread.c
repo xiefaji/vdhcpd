@@ -93,7 +93,7 @@ PRIVATE int thread_phase_start(xTHREAD *pXTHREAD, void *p, trash_queue_t *pRecyc
     if (pXTHREAD->xthread_do_start)
         interval = pXTHREAD->xthread_do_start(p,pRecycleTrash);
     else
-        usleep(xTHREAD_DEFAULT_INTERVAL);
+        interval = xTHREAD_DEFAULT_SECOND_INTERVAL;
     if (interval) usleep(interval);
     return 0;
 }

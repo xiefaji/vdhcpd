@@ -53,7 +53,6 @@ PRIVATE void signal_callback(int num)
         alarm(1);
         break;
     case SIGINT:
-    case SIGKILL:
     case SIGTERM:
         x_log_warn("End %s 正常退出. version [%s] signal[%d]..", PACKAGE_NAME"["PACKAGE_MODULES"]", PACKAGE_VERSION, num);
         xthread_shutdown();
@@ -91,13 +90,12 @@ int main(int argc, char *argv[])
     write_pidfile(path_cfg.pidfile);
 
     //注册信号处理函数
-    signal(SIGINT, signal_callback);
-    signal(SIGKILL, signal_callback);
-    signal(SIGTERM, signal_callback);
+//    signal(SIGINT, signal_callback);
+//    signal(SIGTERM, signal_callback);
     signal(SIGALRM, signal_callback);
     signal(SIGUSR1, signal_callback);
     signal(SIGUSR2, signal_callback);
-    signal(SIGPIPE, SIG_IGN);
+//    signal(SIGPIPE, SIG_IGN);
     g_counter = getpid();//
     alarm(1);
     srand(time(0));

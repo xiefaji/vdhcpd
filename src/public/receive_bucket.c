@@ -16,6 +16,7 @@ PUBLIC receive_bucket_t *receive_bucket_allocate(const int n_packets, const int 
 
 PUBLIC int receive_bucket_receive(int fd, receive_bucket_t *prbucket)
 {
+    prbucket->count = 0;
     receive_prepare(&prbucket->receives, -1, -1);
     return receive(fd, &prbucket->receives, prbucket->receives.n_packets, 0);
 }

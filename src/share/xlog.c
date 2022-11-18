@@ -161,8 +161,8 @@ static void vxlog (struct xlog *xl, int priority, const char *format, va_list ar
     tsctl.precision = xl->timestamp_precision;
 
     /* Syslog output */
-    if (priority <= xl->xloglmt[xLOG_DEST_SYSLOG].maxlvl
-            && xl->xloglmt[xLOG_DEST_SYSLOG].currentcount <= xl->xloglmt[xLOG_DEST_SYSLOG].maxcount)
+    if (priority <= xl->xloglmt[xLOG_DEST_SYSLOG].maxlvl &&
+            (!xl->xloglmt[xLOG_DEST_SYSLOG].maxcount || xl->xloglmt[xLOG_DEST_SYSLOG].currentcount <= xl->xloglmt[xLOG_DEST_SYSLOG].maxcount))
     {
         ++xl->xloglmt[xLOG_DEST_SYSLOG].currentcount;
         va_list ac;
@@ -172,8 +172,8 @@ static void vxlog (struct xlog *xl, int priority, const char *format, va_list ar
     }
 
     /* File output. */
-    if ((priority <= xl->xloglmt[xLOG_DEST_FILE].maxlvl) && xl->fp
-            && xl->xloglmt[xLOG_DEST_FILE].currentcount <= xl->xloglmt[xLOG_DEST_FILE].maxcount)
+    if ((priority <= xl->xloglmt[xLOG_DEST_FILE].maxlvl) && xl->fp &&
+            (!xl->xloglmt[xLOG_DEST_FILE].maxcount || xl->xloglmt[xLOG_DEST_FILE].currentcount <= xl->xloglmt[xLOG_DEST_FILE].maxcount))
     {
         ++xl->xloglmt[xLOG_DEST_FILE].currentcount;
         va_list ac;
@@ -251,7 +251,7 @@ struct xlog *openxlog (const char *progname, xlog_proto_t protocol,int syslog_fl
     /* Set default logging levels. */
     for (i = 0; i < sizeof(xl->xloglmt)/sizeof(xl->xloglmt[0]); i++) {
         xl->xloglmt[i].maxlvl = xLOG_DISABLED;
-        xl->xloglmt[i].currentcount=0;
+        xl->xloglmt[i].currentcount = 0;
         xl->xloglmt[i].maxcount = xLOG_MAX_COUNT;
     }
     xl->default_lvl = LOG_DEBUG;
@@ -317,7 +317,7 @@ int xlog_set_file (struct xlog *xl, const char *filename, int log_level)
     xl->filename = strdup (filename);
     xl->xloglmt[xLOG_DEST_FILE].maxlvl = log_level;
     xl->xloglmt[xLOG_DEST_FILE].currentcount = 0;
-    xl->xloglmt[xLOG_DEST_FILE].maxcount = xLOG_MAX_COUNT;
+    xl->xloglmt[xLOG_DEST_FILE].maxcount = 0/*xLOG_MAX_COUNT*/;
     xl->fp = fp;
     logfile_fd = fileno(fp);
 

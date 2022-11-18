@@ -1,6 +1,7 @@
 #include "dhcpd.h"
 
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server);
+PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server);
 
@@ -137,6 +138,7 @@ PUBLIC void dhcpd_server_update(void *cfg)
     while (knode && knode->data) {
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
         dhcpd_upate_iface(dhcpd_server);//
+        dhcpd_upate_iface_lineip(dhcpd_server);
         dhcpd_upate_relay4_iface(dhcpd_server);
         dhcpd_upate_relay6_iface(dhcpd_server);
         knode = key_next(knode);
@@ -160,6 +162,7 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
         u16 val16;
         u32 val32;
         char ifname[MINNAMELEN+1];
+        char macaddr[MINNAMELEN+1];
 
         CSqlRecorDset_GetFieldValue_U32(&Query, "driveid", &val32);
         dhcpd_server->iface.driveid = val32;
@@ -173,6 +176,37 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
         dhcpd_server->iface.kind = val32;
         CSqlRecorDset_GetFieldValue_U32(&Query, "mtu", &val32);
         dhcpd_server->iface.mtu = val32;
+        CSqlRecorDset_GetFieldValue_String(&Query, "vmac", macaddr, MINNAMELEN);
+        macaddress_parse(&dhcpd_server->iface.macaddr, macaddr);
+    }
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_Destroy(&Query);
+}
+
+//读取线路IP[v4]
+PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
+{
+    char sql[MINBUFFERLEN+1]={0};
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u;", dhcpd_server->nLineID);
+
+    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYSQLRECORDSET Query={0};
+    CSqlRecorDset_Init(&Query);
+    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_ExecSQL(&Query, sql);
+    if (!CSqlRecorDset_GetRecordCount(&Query)) {
+        BZERO(sql, sizeof(sql));
+        snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->nLineID);
+        CSqlRecorDset_ExecSQL(&Query, sql);
+    }
+
+    if (CSqlRecorDset_GetRecordCount(&Query)) {
+        char ipaddr[MINNAMELEN+1]={0};
+        ip4_address_t lineip;
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIP", ipaddr, MINNAMELEN);
+        inet_pton(AF_INET, ipaddr, &lineip);
+        dhcpd_server->iface.ipaddr = lineip;
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
