@@ -1,7 +1,7 @@
 #ifndef _dhcp_config_h
 #define _dhcp_config_h
 #define PACKAGE_NAME "DHCP Daemon"
-#define PACKAGE_VERSION "2022112401"
+#define PACKAGE_VERSION "2022112402"
 #define PACKAGE_MODULES "DHCP服务端"
 
 //默认配置路径
@@ -10,6 +10,7 @@
 #define PATH_LOCKFILE "/var/run/xsdhcp.lock"
 #define PATH_PIDFILE "/var/run/xsdhcp.pid"
 #define PATH_FILTERFILE "/xspeeder/dhcpd.filter"
+#define PATH_FINGERFILE "/opt/dhcpd.finger"
 #define DEFAULT_DBNAME "xspeeder"
 
 #include "share/defines.h"
@@ -25,6 +26,7 @@ typedef struct {
     char acctinfofile[MAXNAMELEN+1];//实时在线终端记录[更新频率:5s]
     char leasefile[MAXNAMELEN+1];//接入服务实时租约信息[更新频率:5s]
     char filterfile[MAXNAMELEN+1];//日志过滤文件
+    char fingerfile[MAXNAMELEN+1];//终端指纹[更新频率:10s]
 } path_cfg_t;
 PUBLIC_DATA path_cfg_t path_cfg;
 ALWAYS_INLINE void path_cfg_init(const char *cfgfile)
@@ -38,6 +40,7 @@ ALWAYS_INLINE void path_cfg_init(const char *cfgfile)
         read_profile_string("path", "pidfile", path_cfg.pidfile, MAXNAMELEN, PATH_PIDFILE, cfgfile);
         read_profile_string("path", "lockfile", path_cfg.lockfile, MAXNAMELEN, PATH_LOCKFILE, cfgfile);
         read_profile_string("path", "filterfile", path_cfg.filterfile, MAXNAMELEN, PATH_FILTERFILE, cfgfile);
+        read_profile_string("path", "fingerfile", path_cfg.fingerfile, MAXNAMELEN, PATH_FINGERFILE, cfgfile);
     }
 }
 

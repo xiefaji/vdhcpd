@@ -146,6 +146,18 @@ PUBLIC realtime_info_t *realtime_search(void *p)
     return (knode && knode->data) ? knode->data:NULL;
 }
 
+PUBLIC realtime_info_t *realtime_search_macaddr(const mac_address_t macaddr)
+{
+    vdhcpd_main_t *vdm = &vdhcpd_main;
+    vdhcpd_stats_t *stats_main = &vdm->stats_main;
+    realtime_key_t key;
+    BZERO(&key, sizeof(realtime_key_t));
+    BCOPY(&macaddr, &key.u.macaddr, sizeof(mac_address_t));
+
+    struct key_node *knode = key_rbsearch(&stats_main->key_realtime, key.key_value);
+    return (knode && knode->data) ? knode->data:NULL;
+}
+
 PUBLIC realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash)
 {
     packet_process_t *packet_process = (packet_process_t *)p;
@@ -227,8 +239,34 @@ PRIVATE void realtime_info_update_lease6(realtime_info_t *realtime_info)
     db_process_push_event(&vdm->db_process, db_event);
 }
 
+PRIVATE void realtime_info_save_finger(realtime_info_t *realtime_info, FILE *pFILE)
+{
+    if (pFILE) {
+        char finger4[MINNAMELEN+1] = {0};
+        char finger6[MINNAMELEN+1] = {0};
+
+        if ((RLTINFO_IS_RELAY4(realtime_info) || RLTINFO_IS_SERVER4(realtime_info)))
+            realtime_info_finger_md5(realtime_info, finger4, MINNAMELEN);
+
+        if ((RLTINFO_IS_RELAY6(realtime_info) || RLTINFO_IS_SERVER6(realtime_info))) {
+
+        }
+
+        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"finger4\":\"%s\",\"finger6\":\"%s\"}\r\n", MACADDRBYTES(realtime_info->key.u.macaddr), finger4, finger6);
+    }
+}
+
 PUBLIC void stats_main_maintain(vdhcpd_stats_t *stats_main, trash_queue_t *pRecycleTrash)
 {
+    PRIVATE u32 last_finger = 0;
+    FILE *pFILE = NULL;
+    char filename[MAXNAMELEN+1]={0};
+    if (CMP_COUNTER(last_finger, 10)) {
+        snprintf(filename, MAXNAMELEN, "%s.bak", path_cfg.fingerfile);
+        pFILE = fopen(filename, "w");
+        SET_COUNTER(last_finger);
+    }
+
     struct key_node *knode = key_first(&stats_main->key_realtime);
     while (knode && knode->data) {
         realtime_info_t *realtime_info = (realtime_info_t *)knode->data;
@@ -244,6 +282,10 @@ PUBLIC void stats_main_maintain(vdhcpd_stats_t *stats_main, trash_queue_t *pRecy
 
         realtime_info_maintain_tick(realtime_info, pRecycleTrash);//并发统计
 
+        realtime_info_save_finger(realtime_info, pFILE);//指纹存储
+
         knode = key_next(knode);
     }
+
+    if (pFILE) { fflush(pFILE); fclose(pFILE); rename(filename, path_cfg.fingerfile); }
 }

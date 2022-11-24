@@ -46,11 +46,14 @@ typedef struct {
 } realtime_info_t;
 #define RLTINFO_IS_RELAY4(r) (((r)->flags & RLTINFO_FLAGS_RELAY4) ? 1:0)
 #define RLTINFO_IS_RELAY6(r) (((r)->flags & RLTINFO_FLAGS_RELAY6) ? 1:0)
+#define RLTINFO_IS_SERVER4(r) (((r)->flags & RLTINFO_FLAGS_SERVER4) ? 1:0)
+#define RLTINFO_IS_SERVER6(r) (((r)->flags & RLTINFO_FLAGS_SERVER6) ? 1:0)
 #define RLTINFO_IS_STATIC4(r) (((r)->flags & RLTINFO_FLAGS_STATIC4) ? 1:0)
 #define RLTINFO_IS_STATIC6(r) (((r)->flags & RLTINFO_FLAGS_STATIC6) ? 1:0)
 #define RLTINFO_EXPIRETIME4(r) (u32)((r)->v4.leasetime ? ((r)->v4.leasetime + (u32)time(NULL)):0)
 #define RLTINFO_EXPIRETIME6(r) (u32)((r)->v6.leasetime ? ((r)->v6.leasetime + (u32)time(NULL)):0)
 PUBLIC_DATA realtime_info_t *realtime_search(void *p);
+PUBLIC_DATA realtime_info_t *realtime_search_macaddr(const mac_address_t macaddr);
 PUBLIC_DATA realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA size_t realtime_info_finger(realtime_info_t *realtime_info, char *finger, const size_t size);
 PUBLIC_DATA size_t realtime_info_finger_md5(realtime_info_t *realtime_info, char *finger_md5, const size_t size);

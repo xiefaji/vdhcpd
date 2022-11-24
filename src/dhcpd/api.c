@@ -1,7 +1,7 @@
 #include "api.h"
 #include "dhcpd.h"
 
-PRIVATE int process_api_message(int sockfd, const unsigned char *buffer, struct sockaddr_in *fromto);
+PRIVATE int process_api_message(int sockfd, const unsigned char *buffer, const size_t retlen, struct sockaddr_in *fromto);
 
 PUBLIC int api_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
@@ -39,10 +39,45 @@ PUBLIC int api_main_start(void *p, trash_queue_t *pRecycleTrash)
      }
      buffer[retlen] = '\0';
 
-    return process_api_message(vdm->sockfd_api, buffer, &sin);
+    return process_api_message(vdm->sockfd_api, buffer, retlen, &sin);
 }
 
-PRIVATE int process_api_message(int sockfd, const unsigned char *buffer, struct sockaddr_in *fromto)
+PRIVATE int api_main_response(int sockfd, const unsigned char *buffer, const size_t retlen, struct sockaddr_in *fromto)
 {
+    return sendto(sockfd, buffer, retlen, 0, (struct sockaddr *)fromto, sizeof(struct sockaddr_in));
+}
+
+PRIVATE int process_field_finger(int sockfd, const unsigned char *buffer, const size_t retlen, struct sockaddr_in *fromto);
+PRIVATE int process_api_message(int sockfd, const unsigned char *buffer, const size_t retlen, struct sockaddr_in *fromto)
+{
+    ipcapi_hdr_t *ipcapi_hdr = (ipcapi_hdr_t *)buffer;
+    switch (ipcapi_hdr->process) {
+    case IPCAPI_PROCESS_FINGER:
+        process_field_finger(sockfd, buffer, retlen, fromto);
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+PRIVATE int process_field_finger(int sockfd, const unsigned char *buffer, const size_t retlen, struct sockaddr_in *fromto)
+{
+    if (retlen < sizeof(ipcapi_hdr_t) + sizeof(ipcapi_hdr_finger_t))
+        return -1;
+
+    ipcapi_hdr_t *ipcapi_hdr = (ipcapi_hdr_t *)buffer;
+    ipcapi_hdr_finger_t *ipcapi_hdr_finger = (ipcapi_hdr_finger_t *)(buffer + sizeof(ipcapi_hdr_t));
+
+    switch (ipcapi_hdr->action) {
+    case IPCAPI_CODE_REQUEST: {
+        realtime_info_t *realtime_info = realtime_search_macaddr(ipcapi_hdr_finger->macaddr);
+        if (realtime_info) realtime_info_finger_md5(realtime_info, ipcapi_hdr_finger->finger4, sizeof(ipcapi_hdr_finger->finger4));
+        ipcapi_hdr->action = IPCAPI_CODE_REPLY;
+    } break;
+    default:
+        break;
+    }
+    api_main_response(sockfd, buffer, sizeof(ipcapi_hdr_t) + sizeof(ipcapi_hdr_finger_t), fromto);
     return 0;
 }
