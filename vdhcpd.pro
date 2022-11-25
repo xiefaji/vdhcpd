@@ -49,6 +49,7 @@ HEADERS += \
     src/dhcpd/db.h \
     src/dhcpd/dhcpd.h \
     src/dhcpd/dhcppacket.h \
+    src/dhcpd/dhcpstats.h \
     src/dhcpd/dhcpv4.h \
     src/dhcpd/dhcpv6.h \
     src/dhcpd/ipcshare.h \
@@ -80,6 +81,7 @@ SOURCES += \
     src/dhcpd/acl.c \
     src/dhcpd/api.c \
     src/dhcpd/dhcpd.c \
+    src/dhcpd/dhcpstats.c \
     src/dhcpd/dhcpv4.c \
     src/dhcpd/dhcpv4relay.c \
     src/dhcpd/dhcpv6.c \

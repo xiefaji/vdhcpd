@@ -77,7 +77,7 @@ struct dhcpv4_message {
     char file[128];
     u8 options[312];
 };
-#define DHCPV4_FLAGS_BROADCAST(p) ((p)->flags & 0x80)
+#define DHCPV4_FLAGS_BROADCAST(p) (ntohs((p)->flags) & DHCPV4_FLAG_BROADCAST)
 //struct dhcpv4_auth_forcerenew {
 //    u8 protocol;
 //    u8 algorithm;

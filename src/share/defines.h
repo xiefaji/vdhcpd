@@ -69,6 +69,7 @@ typedef union {
     (u8) (((addr) >> 16) & 0xFF),\
     (u8) (((addr) >> 24) & 0xFF)
 #define IPv4_IS_EQUAL(a, b) ((a)->address == (b)->address)
+#define IPv4_SUBNET(a, n) ((a)->address & (n)->address)
 
 #define HTONL(ip) htonl((ip))
 #define NTOHL(ip) ntohl((ip))

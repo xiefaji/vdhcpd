@@ -75,9 +75,9 @@ typedef struct {
         u32 aclgroup[DEFAULT_ACLGROUP_SIZE];
     } macctl;
 
-    //静态租约
-    dhcpd_lease_main_t *staticlease_main;
-    void *cfg_main;
+    dhcpd_lease_main_t *staticlease_main;//本服务静态租约
+    void *cfg_main;//
+    void *server_stats;//服务相关状态[实时租约信息]
 } dhcpd_server_t;
 #define ENABLE_IPV4_RELAY(s) ((s)->mode & MODE_IPV4_RELAY)
 #define ENABLE_IPV6_RELAY(s) ((s)->mode & MODE_IPV6_RELAY)

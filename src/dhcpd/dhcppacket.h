@@ -17,7 +17,7 @@ typedef struct {
     u16 l3len,l4len,payload_len;
 
     struct {
-        enum dhcpv4_msg reqmsg;
+        enum dhcpv4_msg msgcode;
         ip4_address_t reqaddr;//客户端请求的固定IP地址
         ip4_address_t badipaddr;//被占用地址 netbit
         u32 leasetime;//客户端请求的租约时长

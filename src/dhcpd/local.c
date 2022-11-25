@@ -42,6 +42,12 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
+    PRIVATE u32 last_assignment;
+    if (CMP_COUNTER(last_assignment, 3)) {
+        SET_COUNTER(last_assignment);
+        server_stats_main_maintain();
+    }
+
     //接收数据包并处理
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
     for (int idx = 0; idx < receive_bucket->count; ++idx) {
@@ -82,43 +88,43 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
 {
     int retcode = 0;
     ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
-    dhcp_packet_t *packet = &packet_process->request;
-    packet->ethhdr = &ipcsharehdr->ethhdr;
+    dhcp_packet_t *request = &packet_process->request;
+    request->ethhdr = &ipcsharehdr->ethhdr;
 
     switch (ipcsharehdr->process) {
     case DEFAULT_DHCPv4_PROCESS: {
         const u16 l3len = ipcsharehdr->datalen;
-        struct iphdr *iphdr = packet->iphdr = (struct iphdr *)ipcsharehdr->pdata;
+        struct iphdr *iphdr = request->iphdr = (struct iphdr *)ipcsharehdr->pdata;
         const u16 iphdr_len = iphdr->ihl * 4;
-        struct udphdr *udphdr = packet->udphdr = (struct udphdr *)(ipcsharehdr->pdata + iphdr_len);
+        struct udphdr *udphdr = request->udphdr = (struct udphdr *)(ipcsharehdr->pdata + iphdr_len);
         const u16 l4len = l3len - iphdr_len;
 
-        packet->l3len = ntohs(iphdr->tot_len);
-        packet->l4len = ntohs(udphdr->len);
-        packet->payload = (unsigned char *)(packet->udphdr + 1);
-        packet->payload_len = l3len - iphdr_len - sizeof(struct udphdr);
+        request->l3len = ntohs(iphdr->tot_len);
+        request->l4len = ntohs(udphdr->len);
+        request->payload = (unsigned char *)(request->udphdr + 1);
+        request->payload_len = l3len - iphdr_len - sizeof(struct udphdr);
 
-        if (l3len != packet->l3len || l4len != packet->l4len || iphdr_len < 20 || ((l4len + iphdr_len) != l3len)) {
+        if (l3len != request->l3len || l4len != request->l4len || iphdr_len < 20 || ((l4len + iphdr_len) != l3len)) {
             x_log_warn("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv4_PROCESS,
-                      l3len, packet->l3len, l4len, packet->l4len, iphdr_len);
+                      l3len, request->l3len, l4len, request->l4len, iphdr_len);
             retcode = -1;
         }
     } break;
     case DEFAULT_DHCPv6_PROCESS: {
         const u16 l3len = ipcsharehdr->datalen;
-        struct ip6_hdr *ip6hdr = packet->ip6hdr = (struct ip6_hdr *)ipcsharehdr->pdata;
+        struct ip6_hdr *ip6hdr = request->ip6hdr = (struct ip6_hdr *)ipcsharehdr->pdata;
         const u16 iphdr_len = sizeof(struct ip6_hdr);
-        struct udphdr *udphdr = packet->udphdr = (struct udphdr *)(ipcsharehdr->pdata + iphdr_len);
+        struct udphdr *udphdr = request->udphdr = (struct udphdr *)(ipcsharehdr->pdata + iphdr_len);
         const u16 l4len = l3len - iphdr_len;
 
-        packet->l3len = ntohs(ip6hdr->ip6_plen) + iphdr_len;
-        packet->l4len = ntohs(udphdr->len);
-        packet->payload = (unsigned char *)(packet->udphdr + 1);
-        packet->payload_len = l3len - iphdr_len - sizeof(struct udphdr);
+        request->l3len = ntohs(ip6hdr->ip6_plen) + iphdr_len;
+        request->l4len = ntohs(udphdr->len);
+        request->payload = (unsigned char *)(request->udphdr + 1);
+        request->payload_len = l3len - iphdr_len - sizeof(struct udphdr);
 
-        if (l3len != packet->l3len || l4len != packet->l4len || iphdr_len < sizeof(struct ip6_hdr) || ((l4len + iphdr_len) != l3len)) {
+        if (l3len != request->l3len || l4len != request->l4len || iphdr_len < sizeof(struct ip6_hdr) || ((l4len + iphdr_len) != l3len)) {
             x_log_warn("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv6_PROCESS,
-                      l3len, packet->l3len, l4len, packet->l4len, iphdr_len);
+                      l3len, request->l3len, l4len, request->l4len, iphdr_len);
             retcode = -1;
         }
     } break;
@@ -135,7 +141,6 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
 {
     ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
-    dhcp_packet_t *packet = &packet_process->request;
 
     if (!dhcpd_server->nEnabled)
         return -1;//DHCP服务停用
@@ -158,10 +163,10 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
 PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
-    dhcp_packet_t *packet = &packet_process->request;
-    struct dhcpv4_message *req = packet->payload;
+    dhcp_packet_t *request = &packet_process->request;
+    struct dhcpv4_message *req = request->payload;
 
-    if (packet->payload_len < offsetof(struct dhcpv4_message, options) + 4 ||
+    if (request->payload_len < offsetof(struct dhcpv4_message, options) + 4 ||
             req->op != DHCPV4_BOOTREQUEST || req->hlen != ETH_ALEN)
         return -1;
 
@@ -176,11 +181,11 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
     u32 hostname_len = 0, reqopts_len = 0, vendorname_len = 0, userclass_len = 0;
 
     u8 *start = &req->options[4];
-    u8 *end = ((u8 *)packet->payload) + packet->payload_len;
+    u8 *end = ((u8 *)request->payload) + request->payload_len;
     struct dhcpv4_option *opt;
     dhcpv4_for_each_option(start, end, opt) {
         if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
-            packet->v4.reqmsg = opt->data[0];
+            request->v4.msgcode = opt->data[0];
         } else if (opt->type == DHCPV4_OPT_REQOPTS && opt->len > 0) {//请求OPTIONS内容
             reqopts_len = opt->len;
             BCOPY(opt->data, reqopts, opt->len);
@@ -191,12 +196,12 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
             vendorname_len = opt->len;
             BCOPY(opt->data, vendorname, opt->len);
         } else if (opt->type == DHCPV4_OPT_IPADDRESS && opt->len == 4) {//终端静态IP
-            BCOPY(opt->data, &packet->v4.reqaddr, 4);
+            BCOPY(opt->data, &request->v4.reqaddr, 4);
         } else if (opt->type == DHCPV4_OPT_SERVERID && opt->len == 4) {//服务ID
-//            if (BCMP(opt->data, &dhcpd_server->dhcpv4.gateway, 4))
-//                return -1;
+            if (BCMP(opt->data, &dhcpd_server->dhcpv4.gateway, 4))
+                return -1;
         } else if (opt->type == DHCPV4_OPT_LEASETIME && opt->len == 4) {//租约时长
-            BCOPY(opt->data, &packet->v4.leasetime, 4);
+            BCOPY(opt->data, &request->v4.leasetime, 4);
         } else if (opt->type == DHCPV4_OPT_MAXMESSAGE_SIZE && opt->len == 2) {
             BCOPY(opt->data, &realtime_info->v4.max_message_size, 2);
         } else if (opt->type == DHCPV4_OPT_USER_CLASS && opt->len > 0) {
@@ -205,20 +210,18 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
         }
     }
 
-    if (packet->v4.reqmsg == DHCPV4_MSG_DISCOVER) BZERO(&realtime_info->v4, sizeof(realtime_info->v4));
+    if (request->v4.msgcode == DHCPV4_MSG_DISCOVER) BZERO(&realtime_info->v4, sizeof(realtime_info->v4));
     if (hostname_len) { BCOPY(hostname, realtime_info->v4.hostname, MAXNAMELEN); realtime_info->v4.hostname_len = hostname_len; }
     if (reqopts_len) { BCOPY(reqopts, realtime_info->v4.reqopts, MAXNAMELEN); realtime_info->v4.reqopts_len = reqopts_len; }
     if (vendorname_len) { BCOPY(vendorname, realtime_info->v4.vendorname, MAXNAMELEN); realtime_info->v4.vendorname_len = vendorname_len; }
     if (userclass_len) { BCOPY(userclass, realtime_info->v4.userclass, MAXNAMELEN); realtime_info->v4.userclass_len = userclass_len; }
-    packet_save_log(packet_process, "接收报文[v4服务][C]");
+    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v4服务][C]");
     return 0;
 }
 
 PRIVATE int packet_process4(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
-    ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
-    dhcp_packet_t *packet = &packet_process->request;
 
     if (!ENABLE_DHCP_IPV4(dhcpd_server))
         return -1;
@@ -235,29 +238,27 @@ PRIVATE int packet_process4(packet_process_t *packet_process, trash_queue_t *pRe
     if (ENABLE_IPV4_RELAY(dhcpd_server)) {//中继模式
         relay4_send_request_packet(packet_process);
     } else if (ENABLE_IPV4_SERVER(dhcpd_server)) {//服务器模式
-
+        server4_process(packet_process);
     }
     return 0;
 }
 
 PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
-    dhcp_packet_t *packet = &packet_process->request;
+    dhcp_packet_t *request = &packet_process->request;
 
     //存储终端信息
     realtime_info_t *realtime_info = packet_process->realtime_info = realtime_find(packet_process, pRecycleTrash);
     if (!realtime_info)
         return -1;
 
-    packet_save_log(packet_process, "接收报文[v6服务][C]");
+    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v6服务][C]");
     return 0;
 }
 
 PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
-    ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
-    dhcp_packet_t *packet = &packet_process->request;
 
     if (!ENABLE_DHCP_IPV6(dhcpd_server))
         return -1;

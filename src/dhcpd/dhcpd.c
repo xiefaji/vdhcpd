@@ -1,7 +1,14 @@
+#include <time.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/fcntl.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 #include "dhcpd.h"
 
 PUBLIC vdhcpd_main_t vdhcpd_main;
 PUBLIC time_t global_time;
+PRIVATE int urandom_fd = -1;
 PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm);
 PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash);
 PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh);
@@ -22,6 +29,31 @@ PRIVATE void database_connect()
     MyDBOp_ExecSQL_1(&xHANDLE_Mysql, "set names utf8");
 }
 
+PUBLIC time_t vdhcpd_time(void)
+{
+//    struct timespec ts;
+//    clock_gettime(CLOCK_MONOTONIC, &ts);
+//    return ts.tv_sec;
+    return global_time;
+}
+
+PUBLIC int vdhcpd_urandom(void *data, size_t len)
+{
+    return read(urandom_fd, data, len);
+}
+
+PRIVATE void vdhcpd_urandom_init()
+{
+    if ((urandom_fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC)) < 0)
+        x_log_warn("%s:%d [%s].", __FUNCTION__, __LINE__, strerror(errno));
+}
+
+PRIVATE void vdhcpd_urandom_release()
+{
+    if (urandom_fd > 0) close(urandom_fd);
+    urandom_fd = -1;
+}
+
 PUBLIC int vdhcpd_init()
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
@@ -37,7 +69,9 @@ PUBLIC int vdhcpd_init()
     vdm->sockfd_webaction = -1;
     stats_main_init(&vdm->stats_main);
     db_process_init(&vdm->db_process);
+    server_stats_main_init();
     vdm->filter_tree = macaddr_filter_init(path_cfg.filterfile);
+    vdhcpd_urandom_init();
     return 0;
 }
 
@@ -61,7 +95,9 @@ PUBLIC int vdhcpd_release()
     vdhcpd_cfg_release(vdm->cfg_main);
     stats_main_release(&vdm->stats_main);
     db_process_destroy(&vdm->db_process);
+    server_stats_main_release();
     macaddr_filter_release(vdm->filter_tree);
+    vdhcpd_urandom_release();
     MyDBOp_Destroy(&xHANDLE_Mysql);
     return 0;
 }

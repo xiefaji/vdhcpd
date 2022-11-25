@@ -30,6 +30,7 @@
 #include "config.h"
 #include "db.h"
 #include "ipcshare.h"
+#include "dhcpstats.h"
 #include "dhcpv4.h"
 #include "dhcpv6.h"
 #include "dhcppacket.h"
@@ -69,6 +70,8 @@ typedef struct {
 PUBLIC_DATA vdhcpd_main_t vdhcpd_main;
 PUBLIC_DATA time_t global_time;
 
+PUBLIC_DATA time_t vdhcpd_time(void);
+PUBLIC_DATA int vdhcpd_urandom(void *data, size_t len);
 PUBLIC_DATA int vdhcpd_init();
 PUBLIC_DATA int vdhcpd_release();
 PUBLIC_DATA int vdhcpd_shutdown();
@@ -88,7 +91,7 @@ typedef struct {
         ipcshare_hdr_t *ipcsharehdr;
     };
     u32 data_len;
-    dhcp_packet_t request;//请求报文
+    dhcp_packet_t request, reply;//请求报文/响应报文
     mac_address_t macaddr;//客户端MAC地址
 } packet_process_t;
 
@@ -109,6 +112,7 @@ PUBLIC_DATA int webaction_start(void *p, trash_queue_t *pRecycleTrash);
     DHCPV4_MIN_PACKET_SIZE : (u8 *)end - (u8 *)start)
 PUBLIC_DATA char *dhcpv4_msg_to_string(u8 reqmsg);
 PUBLIC_DATA void dhcpv4_put(struct dhcpv4_message *msg, u8 **cookie, u8 type, u8 len, const void *data);
+PUBLIC_DATA int server4_process(packet_process_t *packet_process);
 
 //dhcpv4relay.c
 struct agent_infomation_t {
@@ -127,17 +131,15 @@ PUBLIC_DATA int relay6_main_init(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int relay6_main_clean(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int relay6_main_start(void *p, trash_queue_t *pRecycleTrash);
 
-ALWAYS_INLINE void packet_save_log(packet_process_t *packet_process, const char *direction)
+ALWAYS_INLINE void packet_save_log(packet_process_t *packet_process, struct dhcpv4_message *dhcp_packet, enum dhcpv4_msg msgcode, const char *direction)
 {
     vdhcpd_main_t *vdm = packet_process->vdm;
     if (!macaddr_filter_match(vdm->filter_tree, packet_process->macaddr))
         return;
 
-    dhcp_packet_t *packet = &packet_process->request;
-    struct dhcpv4_message *dhcp_packet = (struct dhcpv4_message *)packet->payload;
     realtime_info_t *realtime_info = packet_process->realtime_info;
     x_log_warn("%s "MACADDRFMT" 类型[%s] 包ID[%u] 所属线路[%u] VLAN[%u/%u] CIP["IPV4FMT"] YIP["IPV4FMT"] NIP["IPV4FMT"] RIP["IPV4FMT"] 租约时长[%u]",
-               direction, MACADDRBYTES(packet_process->macaddr), dhcpv4_msg_to_string(packet->v4.reqmsg), dhcp_packet->xid,
+               direction, MACADDRBYTES(packet_process->macaddr), dhcpv4_msg_to_string(msgcode), dhcp_packet->xid,
                realtime_info->lineid, realtime_info->ovlanid, realtime_info->ivlanid, IPV4BYTES(dhcp_packet->ciaddr), IPV4BYTES(dhcp_packet->yiaddr),
                IPV4BYTES(dhcp_packet->siaddr), IPV4BYTES(dhcp_packet->giaddr), realtime_info->v4.leasetime);
 }

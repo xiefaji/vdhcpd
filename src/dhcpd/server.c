@@ -126,6 +126,7 @@ PUBLIC void dhcpd_server_check(void *cfg)
         //加载静态租约
         dhcpd_lease_main_reload(dhcpd_server->staticlease_main, dhcpd_server->nLineID);
         dhcpd_lease_main_check(dhcpd_server->staticlease_main);
+        dhcpd_server->server_stats = server_stats_find(dhcpd_server->nID);
         knode = key_next(knode);
     }
 }

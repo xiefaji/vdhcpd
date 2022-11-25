@@ -59,12 +59,12 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
 
 PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 {
-    dhcp_packet_t *packet = &packet_process->request;
-    packet->payload = packet_process->data;
-    packet->payload_len = packet_process->data_len;
-    struct dhcpv4_message *rep = packet->payload;
+    dhcp_packet_t *request = &packet_process->request;
+    request->payload = packet_process->data;
+    request->payload_len = packet_process->data_len;
+    struct dhcpv4_message *rep = request->payload;
 
-    if (packet->payload_len < offsetof(struct dhcpv4_message, options) + 4 ||
+    if (request->payload_len < offsetof(struct dhcpv4_message, options) + 4 ||
             rep->op != DHCPV4_BOOTREPLY || rep->hlen != ETH_ALEN)
         return -1;
 
@@ -76,11 +76,11 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 
     u32 leasetime = 0;
     u8 *start = &rep->options[4];
-    u8 *end = ((u8 *)packet->payload) + packet->payload_len;
+    u8 *end = ((u8 *)request->payload) + request->payload_len;
     struct dhcpv4_option *opt;
     dhcpv4_for_each_option(start, end, opt) {
         if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
-            packet->v4.reqmsg = opt->data[0];
+            request->v4.msgcode = opt->data[0];
         } else if (opt->type == DHCPV4_OPT_LEASETIME && opt->len == 4) {//租约时长
             BCOPY(opt->data, &leasetime, 4);
             leasetime = ntohl(leasetime);
@@ -89,11 +89,11 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 
     realtime_info->v4.leasetime = leasetime;
     realtime_info->v4.ipaddr = rep->yiaddr;
-    if (packet->v4.reqmsg == DHCPV4_MSG_ACK) {
+    if (request->v4.msgcode == DHCPV4_MSG_ACK) {
         realtime_info->flags |= RLTINFO_FLAGS_RELAY4;
         __sync_fetch_and_add(&realtime_info->update_db4, 1);
     }
-    packet_save_log(packet_process, "接收报文[v4中继][S]");
+    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v4中继][S]");
     return 0;
 }
 
@@ -102,7 +102,7 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
 {
     ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
-    dhcp_packet_t *packet = &packet_process->request;
+    dhcp_packet_t *request = &packet_process->request;
 
     char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
@@ -113,14 +113,14 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     struct dhcpv4_message *relay = (struct dhcpv4_message *)&buffer[offset];
 
     //DHCP报文封装
-    BCOPY(packet->payload, &buffer[offset], packet->payload_len);//拷贝原始报文
+    BCOPY(request->payload, &buffer[offset], request->payload_len);//拷贝原始报文
     ++relay->hops;
     relay->giaddr = dhcpd_server->dhcprelay.v4.lineip;
 
     u8 *cookie = NULL;
     struct dhcpv4_option *opt = NULL;
     u8 *start = &relay->options[4];
-    u8 *end = ((u8 *)&buffer[offset]) + packet->payload_len;
+    u8 *end = ((u8 *)&buffer[offset]) + request->payload_len;
     dhcpv4_for_each_option(start, end, opt) {
         if (opt->type == DHCPV4_OPT_END)
             cookie = (u8 *)opt;
@@ -136,7 +136,7 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     agent_information->opt_subnet.type = 5;
     agent_information->opt_subnet.len = sizeof(ip4_address_t);
     agent_information->subnet = dhcpd_server->dhcprelay.v4.subnet;
-    dhcpv4_put(relay, &cookie, DHCPV4_OPT_AGENT_INFORMATION, sizeof(struct agent_infomation_t), agent_information);
+    dhcpv4_put(relay, &cookie, DHCPV4_OPT_AGENT_INFORMATION, sizeof(struct agent_infomation_t), agent_information);//中继标识
     dhcpv4_put(relay, &cookie, DHCPV4_OPT_END, 0, NULL);
     length += PACKET_SIZE(relay, cookie);
 
@@ -168,7 +168,7 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     sto.sin_family = AF_INET;
     sto.sin_addr.s_addr = dhcpd_server->dhcprelay.v4.serverip.address;
     sto.sin_port = dhcpd_server->dhcprelay.v4.serverport;
-    packet_save_log(packet_process, "发送报文[v4中继][S]");
+    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "发送报文[v4中继][S]");
     return sendto(packet_process->vdm->sockfd_raw, buffer, length, 0, (struct sockaddr *)&sto, sizeof(struct sockaddr));
 }
 
@@ -177,8 +177,8 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     realtime_info_t *realtime_info = packet_process->realtime_info;
-    dhcp_packet_t *packet = &packet_process->request;
-    struct dhcpv4_message *rep = packet->payload;
+    dhcp_packet_t *request = &packet_process->request;
+    struct dhcpv4_message *rep = request->payload;
 
     char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
@@ -190,8 +190,8 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     u8 *payload = (u8 *)&ipcsharehdr->pdata[offset];
 
     //DHCP报文封装
-    BCOPY(packet->payload, payload, packet->payload_len);
-    length += packet->payload_len;
+    BCOPY(request->payload, payload, request->payload_len);
+    length += request->payload_len;
 
     //封装UDP Header
     length += sizeof(struct udphdr);
@@ -234,6 +234,6 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     sin.sin_family = AF_INET;
     sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
     sin.sin_addr.s_addr = 0x100007f;
-    packet_save_log(packet_process, "发送报文[v4中继][C]");
+    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "发送报文[v4中继][C]");
     return sendto(packet_process->vdm->sockfd_main, buffer, sizeof(ipcshare_hdr_t) + length, 0, (struct sockaddr*)&sin, sizeof(sin));
 }
