@@ -129,13 +129,16 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     //中继标识
     char agent_buffer[MINBUFFERLEN+1]={0};
     struct agent_infomation_t *agent_information = (struct agent_infomation_t *)agent_buffer;
-    agent_information->opt_vlan.type = 1;
-    agent_information->opt_vlan.len = sizeof(dhcpv4_option_vlan_t);
-    agent_information->vlan.u.vlanid = htons(ipcsharehdr->outer_vlanid);
-    agent_information->vlan.u.qinqid = htons(ipcsharehdr->inner_vlanid);
-    agent_information->opt_subnet.type = 5;
-    agent_information->opt_subnet.len = sizeof(ip4_address_t);
-    agent_information->subnet = dhcpd_server->dhcprelay.v4.subnet;
+    agent_information->opt_circuitid.type = 1;
+    agent_information->opt_circuitid.len = sizeof(dhcpv4_option_vlan_t);
+    agent_information->circuitid.u.vlanid = htons(ipcsharehdr->outer_vlanid);
+    agent_information->circuitid.u.qinqid = htons(ipcsharehdr->inner_vlanid);
+    agent_information->opt_remoteid.type = 2;
+    agent_information->opt_remoteid.len = sizeof(mac_address_t);
+    BCOPY(&dhcpd_server->iface.macaddr, &agent_information->remoteid, sizeof(mac_address_t));
+    agent_information->opt_linkselection.type = 5;
+    agent_information->opt_linkselection.len = sizeof(ip4_address_t);
+    agent_information->linkselection = dhcpd_server->dhcprelay.v4.subnet;
     dhcpv4_put(relay, &cookie, DHCPV4_OPT_AGENT_INFORMATION, sizeof(struct agent_infomation_t), agent_information);//中继标识
     dhcpv4_put(relay, &cookie, DHCPV4_OPT_END, 0, NULL);
     length += PACKET_SIZE(relay, cookie);

@@ -116,10 +116,12 @@ PUBLIC_DATA int server4_process(packet_process_t *packet_process);
 
 //dhcpv4relay.c
 struct agent_infomation_t {
-    struct dhcpv4_option opt_vlan;
-    dhcpv4_option_vlan_t vlan;
-    struct dhcpv4_option opt_subnet;
-    ip4_address_t subnet;
+    struct dhcpv4_option opt_circuitid;
+    dhcpv4_option_vlan_t circuitid;
+    struct dhcpv4_option opt_remoteid;
+    mac_address_t remoteid;
+    struct dhcpv4_option opt_linkselection;
+    ip4_address_t linkselection;
 } __attribute__ ((packed));
 PUBLIC_DATA int relay4_main_init(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int relay4_main_clean(void *p, trash_queue_t *pRecycleTrash);
