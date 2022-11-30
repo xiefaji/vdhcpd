@@ -198,8 +198,10 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
         } else if (opt->type == DHCPV4_OPT_IPADDRESS && opt->len == 4) {//终端静态IP
             BCOPY(opt->data, &request->v4.reqaddr, 4);
         } else if (opt->type == DHCPV4_OPT_SERVERID && opt->len == 4) {//服务ID
-            if (BCMP(opt->data, &dhcpd_server->dhcpv4.gateway, 4))
-                return -1;
+            ip4_address_t ipaddr;
+            BCOPY(opt->data, &ipaddr, sizeof(ip4_address_t));
+            if (KEY_TREE_NODES(&dhcpd_server->key_serverid) && !key_rbsearch(&dhcpd_server->key_serverid, ipaddr.address))
+                return -1;//存在服务ID列表，但匹配失败
         } else if (opt->type == DHCPV4_OPT_LEASETIME && opt->len == 4) {//租约时长
             BCOPY(opt->data, &request->v4.leasetime, 4);
         } else if (opt->type == DHCPV4_OPT_MAXMESSAGE_SIZE && opt->len == 2) {

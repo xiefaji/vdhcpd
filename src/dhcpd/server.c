@@ -10,6 +10,7 @@ PUBLIC dhcpd_server_t *dhcpd_server_init()
     dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)xmalloc(sizeof(dhcpd_server_t));
     BZERO(dhcpd_server, sizeof(dhcpd_server_t));
     dhcpd_server->staticlease_main = dhcpd_lease_main_init();
+    key_tree_init(&dhcpd_server->key_serverid);
     return dhcpd_server;
 }
 
@@ -20,6 +21,7 @@ PUBLIC void dhcpd_server_release(void *p)
         xfree(dhcpd_server->pVLAN);
         xfree(dhcpd_server->pQINQ);
         dhcpd_lease_main_release(dhcpd_server->staticlease_main);
+        key_tree_destroy2(&dhcpd_server->key_serverid, NULL);
         xfree(dhcpd_server);
     }
 }
@@ -31,6 +33,7 @@ PUBLIC void dhcpd_server_recycle(void *p, trash_queue_t *pRecycleTrash)
         trash_queue_enqueue(pRecycleTrash, dhcpd_server->pVLAN);
         trash_queue_enqueue(pRecycleTrash, dhcpd_server->pQINQ);
         dhcpd_lease_main_recycle(dhcpd_server->staticlease_main, pRecycleTrash);
+        key_tree_nodes_recycle(&dhcpd_server->key_serverid, pRecycleTrash, NULL);
         trash_queue_enqueue(pRecycleTrash, dhcpd_server);
     }
 }
@@ -115,6 +118,31 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     CSqlRecorDset_Destroy(&Query);
 }
 
+PRIVATE void dhcpd_server_reload_serverid(struct key_tree *key_serverid, const u32 nID)
+{
+    char sql[MINBUFFERLEN+1]={0};
+    snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpserverfilter WHERE nID=%u;", nID);
+
+    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYSQLRECORDSET Query={0};
+    CSqlRecorDset_Init(&Query);
+    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_ExecSQL(&Query, sql);
+    for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
+        char ipaddr_string[MINNAMELEN+1]={0};
+        ip4_address_t ipaddr;
+        CSqlRecorDset_GetFieldValue_String(&Query, "szServerIP", ipaddr_string, MINNAMELEN);
+        inet_pton(AF_INET, ipaddr_string, &ipaddr);
+
+        key_rbinsert_u(key_serverid, ipaddr.address, ipaddr.address);
+
+        CSqlRecorDset_MoveNext(&Query);
+    }
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_Destroy(&Query);
+}
+
 //参数校验[]
 PUBLIC void dhcpd_server_check(void *cfg)
 {
@@ -127,6 +155,7 @@ PUBLIC void dhcpd_server_check(void *cfg)
         dhcpd_lease_main_reload(dhcpd_server->staticlease_main, dhcpd_server->nLineID);
         dhcpd_lease_main_check(dhcpd_server->staticlease_main);
         dhcpd_server->server_stats = server_stats_find(dhcpd_server->nID);
+        dhcpd_server_reload_serverid(&dhcpd_server->key_serverid, dhcpd_server->nID);
         knode = key_next(knode);
     }
 }

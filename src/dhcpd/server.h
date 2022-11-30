@@ -75,6 +75,8 @@ typedef struct {
         u32 aclgroup[DEFAULT_ACLGROUP_SIZE];
     } macctl;
 
+    //服务ID过滤
+    struct key_tree key_serverid;
     dhcpd_lease_main_t *staticlease_main;//本服务静态租约
     void *cfg_main;//
     void *server_stats;//服务相关状态[实时租约信息]
