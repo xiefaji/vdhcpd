@@ -70,6 +70,15 @@ PRIVATE void realtime_info_update(realtime_info_t *realtime_info, realtime_info_
     realtime_info->sessionid = realtime_tmp->sessionid;
 }
 
+PRIVATE void realtime_info_update2(const packet_process_t *packet_process, realtime_info_t *realtime_info)
+{
+    const ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
+    realtime_info->lineid = ipcsharehdr->lineid;
+    realtime_info->ovlanid = ipcsharehdr->outer_vlanid;
+    realtime_info->ivlanid = ipcsharehdr->inner_vlanid;
+    realtime_info->sessionid = ipcsharehdr->session;
+}
+
 PRIVATE void realtime_info_release(void *p)
 {
     realtime_info_t *realtime_info = (realtime_info_t *)p;
@@ -178,6 +187,8 @@ PUBLIC realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash)
             realtime_info_recycle(realtime_info, pRecycleTrash);
             realtime_info = knode->data;//数据更新
         }
+    } else {
+        realtime_info_update2(packet_process, realtime_info);
     }
     realtime_tick_update(realtime_info);//更新并发统计
     return realtime_info;
@@ -187,8 +198,8 @@ PRIVATE void realtime_info_warning(realtime_info_t *realtime_info, const char *d
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
     db_event_t *db_event = db_event_init(DPF_NORMAL);
-    char sql[MINBUFFERLEN+1]={0};
-    int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbdhcpalarm (`mac`,`time`,`msg`) VALUES ('"MACADDRFMT"',%u,'%s');",
+    char sql[MAXBUFFERLEN+1]={0};
+    int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcpalarm (`mac`,`time`,`msg`) VALUES ('"MACADDRFMT"',%u,'%s');",
                        MACADDRBYTES(realtime_info->key.u.macaddr), (u32)time(NULL), describe);
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
@@ -218,8 +229,8 @@ PRIVATE void realtime_info_update_lease4(realtime_info_t *realtime_info)
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
     db_event_t *db_event = db_event_init(DPF_NORMAL);
-    char sql[MINBUFFERLEN+1]={0};
-    int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbdhcplease (`ip`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`) "
+    char sql[MAXBUFFERLEN+1]={0};
+    int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcplease (`ip`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`) "
                                           "VALUES (%u,'"MACADDRFMT"','%s',%u,%u,%u,%u,%u,%u,%u,'%s','%s',%u) "
                                           "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
                                           "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
