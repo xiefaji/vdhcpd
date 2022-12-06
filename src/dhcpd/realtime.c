@@ -103,17 +103,17 @@ PUBLIC size_t realtime_info_finger(realtime_info_t *realtime_info, char *finger,
     char hex_reqopts[MINBUFFERLEN+1]={0};
     char hex_maxreqsize[MINNAMELEN+1]={0};
     char hex_vendorname[MINBUFFERLEN+1]={0};
-    char hex_macaddr[MINNAMELEN+1]={0};
+    char hex_clientidentifier[MINNAMELEN+1]={0};
     char hex_userclass[MINBUFFERLEN+1]={0};
 
     hex2string((unsigned char *)realtime_info->v4.hostname, realtime_info->v4.hostname_len, hex_hostname, MINBUFFERLEN, "0");
     hex2string((unsigned char *)realtime_info->v4.reqopts, realtime_info->v4.reqopts_len, hex_reqopts, MINBUFFERLEN, "0");
-    hex2string((unsigned char *)&realtime_info->v4.max_message_size, sizeof(u16), hex_maxreqsize, MINBUFFERLEN, "0");
+    hex2string((unsigned char *)&realtime_info->v4.max_message_size, realtime_info->v4.max_message_size_len, hex_maxreqsize, MINBUFFERLEN, "0");
     hex2string((unsigned char *)realtime_info->v4.vendorname, realtime_info->v4.vendorname_len, hex_vendorname, MINBUFFERLEN, "0");
-    hex2string((unsigned char *)&realtime_info->key.u.macaddr, ETH_ALEN, hex_macaddr, MINNAMELEN, "0");
+    hex2string((unsigned char *)&realtime_info->v4.clientidentifier, realtime_info->v4.clientidentifier_len, hex_clientidentifier, MINNAMELEN, "0");
     hex2string((unsigned char *)realtime_info->v4.userclass, realtime_info->v4.userclass_len, hex_userclass, MINBUFFERLEN, "0");
 
-    return snprintf(finger, size, "%s%s%s%s%s%s", hex_hostname, hex_reqopts, hex_maxreqsize, hex_vendorname, hex_macaddr, hex_userclass);
+    return snprintf(finger, size, "%s%s%s%s%s%s", hex_hostname, hex_reqopts, hex_maxreqsize, hex_vendorname, hex_clientidentifier, hex_userclass);
 }
 
 PUBLIC size_t realtime_info_finger_md5(realtime_info_t *realtime_info, char *finger_md5, const size_t size)
@@ -263,7 +263,8 @@ PRIVATE void realtime_info_save_finger(realtime_info_t *realtime_info, FILE *pFI
 
         }
 
-        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"finger4\":\"%s\",\"finger6\":\"%s\"}\r\n", MACADDRBYTES(realtime_info->key.u.macaddr), finger4, finger6);
+        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"finger4\":\"%s\",\"finger6\":\"%s\",\"leasetime4\":%u,\"leasetime6\":%u}\r\n",
+                MACADDRBYTES(realtime_info->key.u.macaddr), finger4, finger6, realtime_info->v4.leasetime, realtime_info->v6.leasetime);
     }
 }
 

@@ -22,9 +22,11 @@ typedef struct {
         char hostname[MAXNAMELEN+1];//12
         char reqopts[MAXNAMELEN+1];//55
         char vendorname[MAXNAMELEN+1];//60
+        char clientidentifier[MAXNAMELEN+1];//61
         char userclass[MAXNAMELEN+1];//77
-        u32 hostname_len,reqopts_len,vendorname_len,userclass_len;
+        u32 hostname_len,reqopts_len,vendorname_len,clientidentifier_len,userclass_len;
         u16 max_message_size;//57 netbit
+        u16 max_message_size_len;
         u32 leasetime;//租约时长
     } v4;
     struct {

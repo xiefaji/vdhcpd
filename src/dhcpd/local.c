@@ -176,9 +176,9 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
     if (!realtime_info)
         return -1;
 
-    char hostname[MAXNAMELEN+1]={0},reqopts[MAXNAMELEN+1]={0};
+    char hostname[MAXNAMELEN+1]={0},reqopts[MAXNAMELEN+1]={0},clientidentifier[MAXNAMELEN+1]={0};
     char vendorname[MAXNAMELEN+1]={0},userclass[MAXNAMELEN+1]={0};
-    u32 hostname_len = 0, reqopts_len = 0, vendorname_len = 0, userclass_len = 0;
+    u32 hostname_len = 0, reqopts_len = 0, vendorname_len = 0, clientidentifier_len = 0, userclass_len = 0;
 
     u8 *start = &req->options[4];
     u8 *end = ((u8 *)request->payload) + request->payload_len;
@@ -195,6 +195,9 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
         } else if (opt->type == DHCPV4_OPT_VENDOR_CLASS_IDENTIFIER && opt->len > 0) {//厂商
             vendorname_len = opt->len;
             BCOPY(opt->data, vendorname, opt->len);
+        } else if (opt->type == DHCPV4_OPT_CLIENT_IDENTIFIER && opt->len > 0) {
+            clientidentifier_len = opt->len;
+            BCOPY(opt->data, clientidentifier, opt->len);
         } else if (opt->type == DHCPV4_OPT_IPADDRESS && opt->len == 4) {//终端静态IP
             BCOPY(opt->data, &request->v4.reqaddr, 4);
         } else if (opt->type == DHCPV4_OPT_SERVERID && opt->len == 4) {//服务ID
@@ -205,6 +208,7 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
         } else if (opt->type == DHCPV4_OPT_LEASETIME && opt->len == 4) {//租约时长
             BCOPY(opt->data, &request->v4.leasetime, 4);
         } else if (opt->type == DHCPV4_OPT_MAXMESSAGE_SIZE && opt->len == 2) {
+            realtime_info->v4.max_message_size_len = 2;
             BCOPY(opt->data, &realtime_info->v4.max_message_size, 2);
         } else if (opt->type == DHCPV4_OPT_USER_CLASS && opt->len > 0) {
             userclass_len = opt->len;
@@ -216,6 +220,7 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
     if (hostname_len) { BCOPY(hostname, realtime_info->v4.hostname, MAXNAMELEN); realtime_info->v4.hostname_len = hostname_len; }
     if (reqopts_len) { BCOPY(reqopts, realtime_info->v4.reqopts, MAXNAMELEN); realtime_info->v4.reqopts_len = reqopts_len; }
     if (vendorname_len) { BCOPY(vendorname, realtime_info->v4.vendorname, MAXNAMELEN); realtime_info->v4.vendorname_len = vendorname_len; }
+    if (clientidentifier_len) { BCOPY(clientidentifier, realtime_info->v4.clientidentifier, MAXNAMELEN); realtime_info->v4.clientidentifier_len = clientidentifier_len; }
     if (userclass_len) { BCOPY(userclass, realtime_info->v4.userclass, MAXNAMELEN); realtime_info->v4.userclass_len = userclass_len; }
     packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v4服务][C]");
     return 0;

@@ -121,7 +121,7 @@ ALWAYS_INLINE xVLANBITMAP *GetVLAN_BITMASK(const char *pVLANBuffer,const size_t 
     int ret = ParseUIntNums(pVLANBuffer,vlanid_array,MAX_VLAN_ID+1,MAX_VLAN_ID);
     if (ret<=0) {
         BITMASK_ZERO(vlan_bitmask);//limit all vlan
-        BITMASK_SET(vlan_bitmask,default_vlan);
+        BITMASK_SET(vlan_bitmask, default_vlan);
         return vlan_bitmask;
     }
 
