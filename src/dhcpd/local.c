@@ -12,12 +12,17 @@ PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
         exit(0);
     }
 
-    vdm->sockfd_raw = create_raw_socket(1, 1, NULL);
-    if (vdm->sockfd_raw < 0) {
-        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw].", __FUNCTION__, __LINE__);
+    vdm->sockfd_raw4 = create_raw_socket(1, 1, NULL);
+    if (vdm->sockfd_raw4 < 0) {
+        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw 4].", __FUNCTION__, __LINE__);
         exit(0);
     }
 
+    vdm->sockfd_raw6 = create_raw_socket6(1, 1, NULL);
+    if (vdm->sockfd_raw6 < 0) {
+        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw 6].", __FUNCTION__, __LINE__);
+        exit(0);
+    }
 
     //申请数据包接收BUFFER
     receive_bucket = receive_bucket_allocate(1, MAXBUFFERLEN, 0);
@@ -222,6 +227,7 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
     if (vendorname_len) { BCOPY(vendorname, realtime_info->v4.vendorname, MAXNAMELEN); realtime_info->v4.vendorname_len = vendorname_len; }
     if (clientidentifier_len) { BCOPY(clientidentifier, realtime_info->v4.clientidentifier, MAXNAMELEN); realtime_info->v4.clientidentifier_len = clientidentifier_len; }
     if (userclass_len) { BCOPY(userclass, realtime_info->v4.userclass, MAXNAMELEN); realtime_info->v4.userclass_len = userclass_len; }
+    realtime_info_oth_update(realtime_info, 1);
     packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v4服务][C]");
     return 0;
 }
@@ -252,14 +258,76 @@ PRIVATE int packet_process4(packet_process_t *packet_process, trash_queue_t *pRe
 
 PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
+    dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcp_packet_t *request = &packet_process->request;
+    struct dhcpv6_client_header *req = request->payload;
+
+    if (request->payload_len < sizeof(struct dhcpv6_client_header))
+        return -1;
+
+    char hostname[MAXNAMELEN+1]={0},reqopts[MAXNAMELEN+1]={0},clientidentifier[MAXNAMELEN+1]={0};
+    char vendorname[MAXNAMELEN+1]={0},userclass[MAXNAMELEN+1]={0},duid[MAXNAMELEN+1]={0};
+    u32 hostname_len = 0, reqopts_len = 0, vendorname_len = 0, clientidentifier_len = 0, userclass_len = 0, duid_len = 0;
+    u8 *start = (u8 *)&req[1];
+    u8 *end = ((u8 *)request->payload) + request->payload_len;
+    u16 otype, olen;
+    u8 *odata;
+    dhcpv6_for_each_option(start, end, otype, olen, odata) {
+        if (otype == DHCPV6_OPT_CLIENTID) {
+            if (olen == 14 && odata[0] == 0 && odata[1] == 1)
+                BCOPY(&odata[8], &packet_process->macaddr, sizeof(mac_address_t));
+            else if (olen == 10 && odata[0] == 0 && odata[1] == 3)
+                BCOPY(&odata[4], &packet_process->macaddr, sizeof(mac_address_t));
+            duid_len = olen;
+            BCOPY(odata, duid, olen);
+        } /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
+            request->v4.msgcode = opt->data[0];
+        }*/ else if (otype == DHCPV6_OPT_ORO) {//请求OPTIONS内容
+            reqopts_len = olen;
+            BCOPY(odata, reqopts, olen);
+        } else if (otype == DHCPV6_OPT_FQDN) {//终端主机名
+            u8 fqdn_buf[MAXNAMELEN+1]={0};
+            BCOPY(odata, fqdn_buf, olen);
+            fqdn_buf[olen++] = 0;
+            if (dn_expand(&fqdn_buf[1], &fqdn_buf[olen], &fqdn_buf[1], hostname, sizeof(hostname)) > 0)
+                hostname_len = strcspn(hostname, ".");
+        } else if (otype == DHCPV6_OPT_VENDOR_CLASS) {//厂商
+            vendorname_len = olen;
+            BCOPY(odata, vendorname, olen);
+        } /*else if (opt->type == DHCPV4_OPT_SERVERID && opt->len == 4) {//服务ID
+            ip4_address_t ipaddr;
+            BCOPY(opt->data, &ipaddr, sizeof(ip4_address_t));
+            if (KEY_TREE_NODES(&dhcpd_server->key_serverid) && !key_rbsearch(&dhcpd_server->key_serverid, ipaddr.address))
+                return -1;//存在服务ID列表，但匹配失败
+        }*/ else if (otype == DHCPV6_OPT_IA_NA) {
+            struct dhcpv6_ia_hdr *ia = (struct dhcpv6_ia_hdr *)(odata - 4);
+            if (olen > 12) {
+                struct dhcpv6_ia_addr *ia_a = (struct dhcpv6_ia_addr *)&odata[12];
+                BCOPY(&ia_a->addr, &request->v6.reqaddr, sizeof(ip6_address_t));//终端静态IP
+                request->v6.leasetime = ntohl(ia_a->valid);//租约时长
+            }
+        } else if (otype == DHCPV6_OPT_USER_CLASS) {
+            userclass_len = olen;
+            BCOPY(odata, userclass, olen);
+        }
+    }
 
     //存储终端信息
+    BCOPY(request->ethhdr->ether_shost, &packet_process->macaddr, sizeof(mac_address_t));
     realtime_info_t *realtime_info = packet_process->realtime_info = realtime_find(packet_process, pRecycleTrash);
     if (!realtime_info)
         return -1;
 
-    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v6服务][C]");
+    request->v6.msgcode = req->msg_type;
+    if (request->v6.msgcode == DHCPV6_MSG_SOLICIT) BZERO(&realtime_info->v6, sizeof(realtime_info->v6));
+    if (duid_len) { BCOPY(duid, realtime_info->v6.duid, MAXNAMELEN); realtime_info->v6.duid_len = duid_len; }
+    if (hostname_len) { BCOPY(hostname, realtime_info->v6.hostname, MAXNAMELEN); realtime_info->v6.hostname_len = hostname_len; }
+    if (reqopts_len) { BCOPY(reqopts, realtime_info->v6.reqopts, MAXNAMELEN); realtime_info->v6.reqopts_len = reqopts_len; }
+    if (vendorname_len) { BCOPY(vendorname, realtime_info->v6.vendorname, MAXNAMELEN); realtime_info->v6.vendorname_len = vendorname_len; }
+    if (clientidentifier_len) { BCOPY(clientidentifier, realtime_info->v6.clientidentifier, MAXNAMELEN); realtime_info->v6.clientidentifier_len = clientidentifier_len; }
+    if (userclass_len) { BCOPY(userclass, realtime_info->v6.userclass, MAXNAMELEN); realtime_info->v6.userclass_len = userclass_len; }
+    realtime_info_oth_update(realtime_info, 0);
+    packet_save_log6(packet_process, (struct dhcpv6_client_header *)request->payload, request->v6.msgcode, "接收报文[v6服务][C]");
     return 0;
 }
 
@@ -280,7 +348,7 @@ PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRe
 
     //报文分业务处理
     if (ENABLE_IPV6_RELAY(dhcpd_server)) {//中继模式
-
+        relay6_send_request_packet(packet_process);
     } else if (ENABLE_IPV6_SERVER(dhcpd_server)) {//服务器模式
 
     }

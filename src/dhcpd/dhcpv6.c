@@ -1,1 +1,23 @@
 #include "dhcpd.h"
+
+PUBLIC char *dhcpv6_msg_to_string(u8 reqmsg)
+{
+    switch (reqmsg) {
+    case (DHCPV6_MSG_SOLICIT): return "DHCPV6_MSG_SOLICIT";
+    case (DHCPV6_MSG_ADVERTISE): return "DHCPV6_MSG_ADVERTISE";
+    case (DHCPV6_MSG_REQUEST): return "DHCPV6_MSG_REQUEST";
+    case (DHCPV6_MSG_CONFIRM): return "DHCPV6_MSG_CONFIRM";
+    case (DHCPV6_MSG_RENEW): return "DHCPV6_MSG_RENEW";
+    case (DHCPV6_MSG_REBIND): return "DHCPV6_MSG_REBIND";
+    case (DHCPV6_MSG_REPLY): return "DHCPV6_MSG_REPLY";
+    case (DHCPV6_MSG_RELEASE): return "DHCPV6_MSG_RELEASE";
+    case (DHCPV6_MSG_DECLINE): return "DHCPV6_MSG_DECLINE";
+    case (DHCPV6_MSG_RECONFIGURE): return "DHCPV6_MSG_RECONFIGURE";
+    case (DHCPV6_MSG_INFORMATION_REQUEST): return "DHCPV6_MSG_INFORMATION_REQUEST";
+    case (DHCPV6_MSG_RELAY_FORW): return "DHCPV6_MSG_RELAY_FORW";
+    case (DHCPV6_MSG_RELAY_REPL): return "DHCPV6_MSG_RELAY_REPL";
+    case (DHCPV6_MSG_DHCPV4_QUERY): return "DHCPV6_MSG_DHCPV4_QUERY";
+    case (DHCPV6_MSG_DHCPV4_RESPONSE): return "DHCPV6_MSG_DHCPV4_RESPONSE";
+    default: return "UNKNOWN";
+    }
+}

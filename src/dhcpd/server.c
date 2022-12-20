@@ -2,6 +2,7 @@
 
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server);
+PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server);
 
@@ -90,6 +91,17 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         dhcpd_server->dhcpv4.windns[1].address = htonl(val32);
 
         //DHCPV6配置
+        CSqlRecorDset_GetFieldValue_String(&Query, "ip6_low", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.startip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "ip6_up", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.endip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6gateway", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.gateway);
+        CSqlRecorDset_GetFieldValue_U16(&Query, "prefix6", &dhcpd_server->dhcpv6.prefix);
+        CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6dns1", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[0]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6dns2", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[1]);
 
         //DHCP中继配置
         CSqlRecorDset_GetFieldValue_String(&Query, "identifier", dhcpd_server->dhcprelay.identifier, MINNAMELEN);
@@ -100,6 +112,11 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_U16(&Query, "upstream_port", &val16);
         dhcpd_server->dhcprelay.v4.serverport = htons(val16);
         CSqlRecorDset_GetFieldValue_U32(&Query, "outerlineid", &dhcpd_server->dhcprelay.v4.lineid);
+        CSqlRecorDset_GetFieldValue_String(&Query, "upstream_ip_v6", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcprelay.v6.serverip);
+        CSqlRecorDset_GetFieldValue_U16(&Query, "upstream_port_v6", &val16);
+        dhcpd_server->dhcprelay.v6.serverport = htons(val16);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "outerlineid_v6", &dhcpd_server->dhcprelay.v6.lineid);
 
         //MAC控制
         CSqlRecorDset_GetFieldValue_U32(&Query, "aclmode", &dhcpd_server->macctl.aclmode);
@@ -169,6 +186,7 @@ PUBLIC void dhcpd_server_update(void *cfg)
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
         dhcpd_upate_iface(dhcpd_server);//
         dhcpd_upate_iface_lineip(dhcpd_server);
+        dhcpd_upate_iface_lineip6(dhcpd_server);
         dhcpd_upate_relay4_iface(dhcpd_server);
         dhcpd_upate_relay6_iface(dhcpd_server);
         knode = key_next(knode);
@@ -208,16 +226,27 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
         dhcpd_server->iface.mtu = val32;
         CSqlRecorDset_GetFieldValue_String(&Query, "vmac", macaddr, MINNAMELEN);
         macaddress_parse(&dhcpd_server->iface.macaddr, macaddr);
+
+        dhcpd_server->iface.ipaddr6_local.ip_u8[0] = 0xFE;
+        dhcpd_server->iface.ipaddr6_local.ip_u8[1] = 0x80;
+        dhcpd_server->iface.ipaddr6_local.ip_u8[8] = dhcpd_server->iface.macaddr.addr[0];
+        dhcpd_server->iface.ipaddr6_local.ip_u8[9] = dhcpd_server->iface.macaddr.addr[1];
+        dhcpd_server->iface.ipaddr6_local.ip_u8[10] = dhcpd_server->iface.macaddr.addr[2];
+        dhcpd_server->iface.ipaddr6_local.ip_u8[11] = 0xFE;
+        dhcpd_server->iface.ipaddr6_local.ip_u8[12] = 0x80;
+        dhcpd_server->iface.ipaddr6_local.ip_u8[13] = dhcpd_server->iface.macaddr.addr[3];
+        dhcpd_server->iface.ipaddr6_local.ip_u8[14] = dhcpd_server->iface.macaddr.addr[4];
+        dhcpd_server->iface.ipaddr6_local.ip_u8[15] = dhcpd_server->iface.macaddr.addr[5];
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
 }
 
-//读取线路IP[v4]
+//读取线路网关IP[v4]
 PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u;", dhcpd_server->nLineID);
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=4;", dhcpd_server->nLineID);
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -242,11 +271,42 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_Destroy(&Query);
 }
 
-//读取中继线路配置[v4]
+//读取线路网关IP[v6]
+PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
+{
+    char sql[MINBUFFERLEN+1]={0};
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=6;", dhcpd_server->nLineID);
+
+    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYSQLRECORDSET Query={0};
+    CSqlRecorDset_Init(&Query);
+    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_ExecSQL(&Query, sql);
+    if (!CSqlRecorDset_GetRecordCount(&Query)) {
+        BZERO(sql, sizeof(sql));
+        snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->nLineID);
+        CSqlRecorDset_ExecSQL(&Query, sql);
+    }
+
+    if (CSqlRecorDset_GetRecordCount(&Query)) {
+        char ipaddr[MINNAMELEN+1]={0};
+        ip6_address_t lineip;
+        char *p ,*next=NULL;
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIP", ipaddr, MINNAMELEN);
+        p = stok(ipaddr,  "/", &next);
+        if (p) inet_pton(AF_INET6, p, &lineip);
+        dhcpd_server->iface.ipaddr6 = lineip;
+    }
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_Destroy(&Query);
+}
+
+//读取中继线路[出口]配置[v4]
 PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u "
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=4"
                                 "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
                                 "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
              dhcpd_server->dhcprelay.v4.lineid, ntohl(dhcpd_server->dhcprelay.v4.serverip.address));
@@ -274,10 +334,38 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_Destroy(&Query);
 }
 
-//读取中继线路配置[v6]
+//读取中继线路[出口]配置[v6]
 PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
 {
+    char sql[MINBUFFERLEN+1]={0};
+//    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=6"
+//                                "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
+//                                "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
+//             dhcpd_server->dhcprelay.v6.lineid, ntohl(dhcpd_server->dhcprelay.v6.serverip.address));
 
+    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYSQLRECORDSET Query={0};
+    CSqlRecorDset_Init(&Query);
+    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_ExecSQL(&Query, sql);
+    if (!CSqlRecorDset_GetRecordCount(&Query)) {
+        BZERO(sql, sizeof(sql));
+        snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->dhcprelay.v6.lineid);
+        CSqlRecorDset_ExecSQL(&Query, sql);
+    }
+
+    if (CSqlRecorDset_GetRecordCount(&Query)) {
+        char ipaddr[MINNAMELEN+1]={0};
+        ip6_address_t lineip;
+        char *p ,*next=NULL;
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIP", ipaddr, MINNAMELEN);
+        p = stok(ipaddr,  "/", &next);
+        if (p) inet_pton(AF_INET6, p, &lineip);
+        dhcpd_server->dhcprelay.v6.lineip = lineip;
+    }
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_Destroy(&Query);
 }
 
 //DHCP服务查找

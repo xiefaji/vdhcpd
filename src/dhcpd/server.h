@@ -36,6 +36,8 @@ typedef struct {
         u16 mtu;
         mac_address_t macaddr;
         ip4_address_t ipaddr;
+        ip6_address_t ipaddr6;
+        ip6_address_t ipaddr6_local;
     } iface;
 
     //DHCPV4配置
@@ -51,7 +53,11 @@ typedef struct {
 
     //DHCPV6配置
     struct {
-
+        ip6_address_t startip;//IP分配范围：启始IP netbit
+        ip6_address_t endip;//IP分配范围：结束IP netbit
+        ip6_address_t gateway;//网关地址 netbit
+        u16 prefix;
+        ip6_address_t dns[2];//DNS地址 netbit
     } dhcpv6;
 
     //DHCP中继配置
@@ -64,6 +70,10 @@ typedef struct {
             volatile ip4_address_t lineip;//出口线路IP netbit
         } v4;
         struct {
+            ip6_address_t serverip;//服务器地址 netbit
+            u16 serverport;//服务器端口 netbit
+            u32 lineid;//出口线路ID
+            volatile ip6_address_t lineip;//出口线路IP netbit
         } v6;
         char identifier[MINNAMELEN+1];//中继标识
     } dhcprelay;

@@ -77,6 +77,7 @@ typedef union {
 #define IPV4_NTOHL(ip4) NTOHL((ip4).address)
 
 typedef union {
+    struct in6_addr addr;
     unsigned long long ip_u64[2];
     struct {
         unsigned int rc[3];

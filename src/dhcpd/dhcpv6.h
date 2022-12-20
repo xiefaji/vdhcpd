@@ -38,6 +38,7 @@
 #define DHCPV6_OPT_AUTH 11
 #define DHCPV6_OPT_RAPID_COMMIT 14
 #define DHCPV6_OPT_USER_CLASS 15
+#define DHCPV6_OPT_VENDOR_CLASS 16
 #define DHCPV6_OPT_INTERFACE_ID 18
 #define DHCPV6_OPT_RECONF_MSG 19
 #define DHCPV6_OPT_RECONF_ACCEPT 20
@@ -47,6 +48,7 @@
 #define DHCPV6_OPT_IA_PREFIX 26
 #define DHCPV6_OPT_SNTP_SERVERS 31
 #define DHCPV6_OPT_INFO_REFRESH 32
+#define DHCPV6_OPT_REMOTE_ID 37
 #define DHCPV6_OPT_FQDN 39
 #define DHCPV6_OPT_NTP_SERVERS 56
 #define DHCPV6_OPT_SOL_MAX_RT 82
@@ -142,6 +144,12 @@ struct dhcpv6_cer_id {
     u8 auth[16];
     ip6_address_t addr;
 };
+
+struct dhcpv6_option {
+    u16 type;
+    u16 len;
+    u8 data[0];
+} __attribute__((packed));
 
 #define dhcpv6_for_each_option(start, end, otype, olen, odata)\
     for (u8 *_o = (u8 *)(start); _o + 4 <= (end) &&\

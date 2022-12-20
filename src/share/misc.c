@@ -181,7 +181,7 @@ PUBLIC int create_udp_socket6(const unsigned short listenport, int local, int ti
 
 PUBLIC int create_raw_socket(int timeout, int reuseport, const char *ifname)
 {
-    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (sock < 0) {
         x_log_warn("%s : 创建socket失败[%s].", __FUNCTION__, strerror(errno));
         return -1;
@@ -199,6 +199,37 @@ PUBLIC int create_raw_socket(int timeout, int reuseport, const char *ifname)
 
     int on = 1;
     if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &on, sizeof(on)) < 0) {
+        printf("Set IP_HDRINCL failed\n");
+    }
+
+    //设置绑定接口
+    if (ifname) socket_set_bind_interface(sock, ifname);
+
+    //设置接收/发送超时
+    socket_set_timeout(sock, timeout, timeout);
+    return sock;
+}
+
+PUBLIC int create_raw_socket6(int timeout, int reuseport, const char *ifname)
+{
+    int sock = socket(AF_INET6, SOCK_RAW, IPPROTO_RAW);
+    if (sock < 0) {
+        x_log_warn("%s : 创建socket失败[%s].", __FUNCTION__, strerror(errno));
+        return -1;
+    }
+
+    int one = 1;
+    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
+
+    if (reuseport) {
+        one = 1;
+        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
+        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__, strerror(errno));
+    }
+
+    int on = 1;
+    if (setsockopt(sock, IPPROTO_IPV6, IP_HDRINCL, &on, sizeof(on)) < 0) {
         printf("Set IP_HDRINCL failed\n");
     }
 

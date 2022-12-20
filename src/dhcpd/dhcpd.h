@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <errno.h>
+#include <resolv.h>
 
 #include "share/defines.h"
 #include "share/hash.h"
@@ -44,7 +45,8 @@ typedef struct {
 } vdhcpd_cfg_t;
 
 typedef struct {
-    int sockfd_raw;//原始套接字[用于发送中继报文]
+    int sockfd_raw4;
+    int sockfd_raw6;//原始套接字[用于发送中继报文]
     int sockfd_main;//
     int sockfd_relay4;//中继[ipv4]
     int sockfd_relay6;//中继[ipv6]
@@ -114,6 +116,9 @@ PUBLIC_DATA char *dhcpv4_msg_to_string(u8 reqmsg);
 PUBLIC_DATA void dhcpv4_put(struct dhcpv4_message *msg, u8 **cookie, u8 type, u8 len, const void *data);
 PUBLIC_DATA int server4_process(packet_process_t *packet_process);
 
+//dhcpv6.c
+PUBLIC_DATA char *dhcpv6_msg_to_string(u8 reqmsg);
+
 //dhcpv4relay.c
 struct agent_infomation_t {
     struct dhcpv4_option opt_circuitid;
@@ -132,6 +137,8 @@ PUBLIC_DATA int relay4_send_reply_packet(packet_process_t *packet_process);
 PUBLIC_DATA int relay6_main_init(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int relay6_main_clean(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int relay6_main_start(void *p, trash_queue_t *pRecycleTrash);
+PUBLIC_DATA int relay6_send_request_packet(packet_process_t *packet_process);
+PUBLIC_DATA int relay6_send_reply_packet(packet_process_t *packet_process);
 
 ALWAYS_INLINE void packet_save_log(packet_process_t *packet_process, struct dhcpv4_message *dhcp_packet, enum dhcpv4_msg msgcode, const char *direction)
 {
@@ -144,5 +151,21 @@ ALWAYS_INLINE void packet_save_log(packet_process_t *packet_process, struct dhcp
                direction, MACADDRBYTES(packet_process->macaddr), dhcpv4_msg_to_string(msgcode), dhcp_packet->xid,
                realtime_info->lineid, realtime_info->ovlanid, realtime_info->ivlanid, IPV4BYTES(dhcp_packet->ciaddr), IPV4BYTES(dhcp_packet->yiaddr),
                IPV4BYTES(dhcp_packet->siaddr), IPV4BYTES(dhcp_packet->giaddr), realtime_info->v4.leasetime);
+}
+
+ALWAYS_INLINE void packet_save_log6(packet_process_t *packet_process, struct dhcpv6_client_header *dhcp_packet, u16 msgcode, const char *direction)
+{
+    vdhcpd_main_t *vdm = packet_process->vdm;
+    if (!macaddr_filter_match(vdm->filter_tree, packet_process->macaddr))
+        return;
+
+    u32 xid = 0;
+    BCOPY(dhcp_packet->transaction_id, &xid, 3);
+    realtime_info_t *realtime_info = packet_process->realtime_info;
+    char ipaddr[MINNAMELEN+1]={0};
+    inet_ntop(AF_INET6, &realtime_info->v6.ipaddr, ipaddr, MINNAMELEN);
+    x_log_warn("%s "MACADDRFMT" 类型[%s] 包ID[%u] 所属线路[%u] VLAN[%u/%u] CIP[%s] 租约时长[%u]",
+               direction, MACADDRBYTES(packet_process->macaddr), dhcpv6_msg_to_string(msgcode), xid,
+               realtime_info->lineid, realtime_info->ovlanid, realtime_info->ivlanid, ipaddr, realtime_info->v6.leasetime);
 }
 #endif

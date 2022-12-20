@@ -93,6 +93,8 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
         realtime_info->flags |= RLTINFO_FLAGS_RELAY4;
         __sync_fetch_and_add(&realtime_info->update_db4, 1);
     }
+    request->relay_payload = request->payload;
+    request->relay_payload_len = request->payload_len;
     packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "接收报文[v4中继][S]");
     return 0;
 }
@@ -172,7 +174,7 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     sto.sin_addr.s_addr = dhcpd_server->dhcprelay.v4.serverip.address;
     sto.sin_port = dhcpd_server->dhcprelay.v4.serverport;
     packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "发送报文[v4中继][S]");
-    return sendto(packet_process->vdm->sockfd_raw, buffer, length, 0, (struct sockaddr *)&sto, sizeof(struct sockaddr));
+    return sendto(packet_process->vdm->sockfd_raw4, buffer, length, 0, (struct sockaddr *)&sto, sizeof(struct sockaddr));
 }
 
 //RX
@@ -181,7 +183,7 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     realtime_info_t *realtime_info = packet_process->realtime_info;
     dhcp_packet_t *request = &packet_process->request;
-    struct dhcpv4_message *rep = request->payload;
+    struct dhcpv4_message *rep = request->relay_payload;
 
     char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
@@ -193,8 +195,8 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     u8 *payload = (u8 *)&ipcsharehdr->pdata[offset];
 
     //DHCP报文封装
-    BCOPY(request->payload, payload, request->payload_len);
-    length += request->payload_len;
+    BCOPY(request->relay_payload, payload, request->relay_payload_len);
+    length += request->relay_payload_len;
 
     //封装UDP Header
     length += sizeof(struct udphdr);
@@ -237,6 +239,6 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     sin.sin_family = AF_INET;
     sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
     sin.sin_addr.s_addr = 0x100007f;
-    packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "发送报文[v4中继][C]");
+    packet_save_log(packet_process, (struct dhcpv4_message *)request->relay_payload, request->v4.msgcode, "发送报文[v4中继][C]");
     return sendto(packet_process->vdm->sockfd_main, buffer, sizeof(ipcshare_hdr_t) + length, 0, (struct sockaddr*)&sin, sizeof(sin));
 }

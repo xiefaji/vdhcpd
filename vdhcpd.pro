@@ -12,7 +12,7 @@ DESTDIR = ./bin
 DEFINES += _GNU_SOURCE
 INCLUDEPATH += src
 LIBS += -lpthread -ldl -lz
-LIBS += -ljemalloc
+LIBS += -ljemalloc -lresolv
 LIBS += -L/usr/lib64/mysql -lmysqlclient
 
 HEADERS += \

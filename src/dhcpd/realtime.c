@@ -79,6 +79,19 @@ PRIVATE void realtime_info_update2(const packet_process_t *packet_process, realt
     realtime_info->sessionid = ipcsharehdr->session;
 }
 
+PUBLIC void realtime_info_oth_update(realtime_info_t *realtime_info, const int ipv4)
+{
+    vdhcpd_main_t *vdm = &vdhcpd_main;
+    vdhcpd_stats_t *stats_main = &vdm->stats_main;
+    if (ipv4) {
+
+    } else {
+        set_tree_lock(&stats_main->set_realtime_duid);
+        set_rbinsert(&stats_main->set_realtime_duid, realtime_info, realtime_info_duid_cmp);
+        set_tree_unlock(&stats_main->set_realtime_duid);
+    }
+}
+
 PRIVATE void realtime_info_release(void *p)
 {
     realtime_info_t *realtime_info = (realtime_info_t *)p;
@@ -135,11 +148,13 @@ PUBLIC void stats_main_init(vdhcpd_stats_t *stats_main)
 {
     BZERO(stats_main, sizeof(vdhcpd_stats_t));
     key_tree_init(&stats_main->key_realtime);
+    set_tree_init(&stats_main->set_realtime_duid);
 }
 
 PUBLIC void stats_main_release(vdhcpd_stats_t *stats_main)
 {
     BZERO(stats_main, sizeof(vdhcpd_stats_t));
+    set_tree_destroy(&stats_main->set_realtime_duid, NULL);
     key_tree_destroy2(&stats_main->key_realtime, realtime_info_release);
 }
 
@@ -165,6 +180,18 @@ PUBLIC realtime_info_t *realtime_search_macaddr(const mac_address_t macaddr)
 
     struct key_node *knode = key_rbsearch(&stats_main->key_realtime, key.key_value);
     return (knode && knode->data) ? knode->data:NULL;
+}
+
+PUBLIC realtime_info_t *realtime_search_duid(const u8 *clientidentifier, const u32 len)
+{
+    vdhcpd_main_t *vdm = &vdhcpd_main;
+    vdhcpd_stats_t *stats_main = &vdm->stats_main;
+    realtime_info_t realtime_info;
+    BZERO(&realtime_info, sizeof(realtime_info_t));
+    BCOPY(clientidentifier, realtime_info.v6.duid, MIN(len, MAXNAMELEN));
+
+    struct set_node *snode = set_rbsearch(&stats_main->set_realtime_duid, &realtime_info, realtime_info_duid_cmp);
+    return (snode && snode->data) ? snode->data:NULL;
 }
 
 PUBLIC realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash)
@@ -230,11 +257,11 @@ PRIVATE void realtime_info_update_lease4(realtime_info_t *realtime_info)
     vdhcpd_main_t *vdm = &vdhcpd_main;
     db_event_t *db_event = db_event_init(DPF_NORMAL);
     char sql[MAXBUFFERLEN+1]={0};
-    int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcplease (`ip`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`) "
-                                          "VALUES (%u,'"MACADDRFMT"','%s',%u,%u,%u,%u,%u,%u,%u,'%s','%s',%u) "
+    int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcplease6 (`ipaddr`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`,`ipversion`) "
+                                          "VALUES ('"IPV4FMT"','"MACADDRFMT"','%s',%u,%u,%u,%u,%u,%u,%u,'%s','%s',%u, 4) "
                                           "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
                                           "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
-                       ntohl(realtime_info->v4.ipaddr.address), MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
+                       IPV4BYTES(realtime_info->v4.ipaddr), MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
                        0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info),
                        MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
                        0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info));
@@ -246,7 +273,18 @@ PRIVATE void realtime_info_update_lease6(realtime_info_t *realtime_info)
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
     db_event_t *db_event = db_event_init(DPF_NORMAL);
-
+    char ipaddr[MINNAMELEN+1]={0};
+    inet_ntop(AF_INET6, &realtime_info->v6.ipaddr, ipaddr, MINNAMELEN);
+    char sql[MAXBUFFERLEN+1]={0};
+    int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcplease6 (`ipaddr`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`,`ipversion`) "
+                                          "VALUES ('%s','"MACADDRFMT"','%s',%u,%u,%u,%u,%u,%u,%u,'%s','%s',%u,6) "
+                                          "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
+                                          "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
+                       ipaddr, MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v6.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME6(realtime_info),
+                       0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info),
+                       MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v6.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME6(realtime_info),
+                       0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info));
+    db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }
 

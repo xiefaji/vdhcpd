@@ -14,6 +14,7 @@ PUBLIC_DATA void socket_set_timeout(int sock,int sendtimeout,int recvtimeout);
 PUBLIC_DATA int create_udp_socket(const unsigned short listenport, int local, int timeout, int reuseport, const char *ifname);
 PUBLIC_DATA int create_udp_socket6(const unsigned short listenport, int local, int timeout, int reuseport, const char *ifname);
 PUBLIC_DATA int create_raw_socket(int timeout, int reuseport, const char *ifname);
+PUBLIC_DATA int create_raw_socket6(int timeout, int reuseport, const char *ifname);
 //PUBLIC_DATA int create_udp_socket2(const unsigned short listenport, int local, int timeout, int us_timeout,int reuseport, const char *ifname);
 PUBLIC_DATA int set_interface_up(const char *interface);
 PUBLIC_DATA int create_interface_tun(const char *interface, int flags);
