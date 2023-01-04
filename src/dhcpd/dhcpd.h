@@ -52,6 +52,7 @@ typedef struct {
     int sockfd_relay6;//中继[ipv6]
     int sockfd_api;//
     int sockfd_webaction;
+    int filter_subnet;//子网过滤
 
     xTHREAD relay4Thread;
     xTHREAD relay6Thread;
@@ -71,6 +72,7 @@ typedef struct {
 } vdhcpd_main_t;
 PUBLIC_DATA vdhcpd_main_t vdhcpd_main;
 PUBLIC_DATA time_t global_time;
+PUBLIC_DATA int filter_subnet;
 
 PUBLIC_DATA time_t vdhcpd_time(void);
 PUBLIC_DATA int vdhcpd_urandom(void *data, size_t len);

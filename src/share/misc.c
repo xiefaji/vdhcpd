@@ -307,6 +307,18 @@ PUBLIC int g2u(const char *inbuf,size_t inlen,char *outbuf,size_t outlen)
     return code_convert("gbk","utf-8",inbuf,inlen,outbuf,outlen);
 }
 
+PUBLIC u_int32_t get_netmask(const int pre)
+{
+    if (pre <= 0 || pre > 32)
+        return 0;
+    int i;
+    u_int32_t mask=0;
+    for (i=0;i < pre;++i)
+        mask |= (1<< (32-i-1));
+
+    return htonl(mask);
+}
+
 PUBLIC void clean_quotes_to_blank(const char *src)
 {
     char *current = (char *)src;

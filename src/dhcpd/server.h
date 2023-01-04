@@ -38,6 +38,7 @@ typedef struct {
         ip4_address_t ipaddr;
         ip6_address_t ipaddr6;
         ip6_address_t ipaddr6_local;
+        struct key_tree *key_all_lineip4;
     } iface;
 
     //DHCPV4配置
@@ -107,7 +108,8 @@ PUBLIC_DATA void dhcpd_server_release(void *p);
 PUBLIC_DATA void dhcpd_server_recycle(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA void dhcpd_server_reload(void *cfg);
 PUBLIC_DATA void dhcpd_server_check(void *cfg);
-PUBLIC_DATA void dhcpd_server_update(void *cfg);
+PUBLIC_DATA void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash);
+PUBLIC_DATA int iface_subnet_match(dhcpd_server_t *dhcpd_server, const ip4_address_t ipaddr);
 
 PUBLIC_DATA dhcpd_server_t *dhcpd_server_search(void *cfg, const u32 nID);
 PUBLIC_DATA dhcpd_server_t *dhcpd_server_search_LineID(void *cfg, const u32 nLineID);

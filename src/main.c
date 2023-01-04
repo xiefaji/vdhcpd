@@ -6,6 +6,7 @@
 PUBLIC volatile unsigned int g_counter;
 PRIVATE int g_daemon_mode;
 PRIVATE int g_verbose=LOG_WARNING;
+PUBLIC int filter_subnet=0;
 PUBLIC path_cfg_t path_cfg;
 
 //运行参数说明
@@ -24,10 +25,13 @@ PRIVATE void usage()
 PRIVATE int parse_options(int argc, char **argv)
 {
     int c=0;
-    while ((c = getopt(argc, argv, "dv:c:")) != -1) {
+    while ((c = getopt(argc, argv, "dfv:c:")) != -1) {
         switch (c) {
         case 'd':
             g_daemon_mode = 1;
+            break;
+        case 'f':
+            filter_subnet = 1;
             break;
         case 'v':
             g_verbose = atoi(optarg);

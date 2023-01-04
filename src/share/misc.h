@@ -21,6 +21,7 @@ PUBLIC_DATA int create_interface_tun(const char *interface, int flags);
 
 PUBLIC_DATA int g2u(const char *inbuf,size_t inlen,char *outbuf,size_t outlen);
 PUBLIC_DATA int u2g(const char *inbuf,size_t inlen,char *outbuf,size_t outlen);
+PUBLIC_DATA u_int32_t get_netmask(const int pre);
 PUBLIC_DATA void clean_quotes_to_blank(const char *src);
 PUBLIC_DATA void clean_quotes_to_blank2(const char *src, const size_t len);
 PUBLIC_DATA char *stok(char *str, const char *delim, char **last);

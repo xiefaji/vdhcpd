@@ -68,6 +68,7 @@ PUBLIC int vdhcpd_init()
     vdm->sockfd_relay6 = -1;
     vdm->sockfd_api = -1;
     vdm->sockfd_webaction = -1;
+    vdm->filter_subnet = filter_subnet;
     stats_main_init(&vdm->stats_main);
     db_process_init(&vdm->db_process);
     server_stats_main_init();
@@ -167,7 +168,7 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
         vdhcpd_cfg_recycle(vdm->cfg_main, pRecycleTrash);
         vdm->cfg_main = cfg_main;
     } else if (CMP_COUNTER(last_update, 30)) {//局部参数动态更新
-        dhcpd_server_update(vdm->cfg_main);
+        dhcpd_server_update(vdm->cfg_main, pRecycleTrash);
         SET_COUNTER(last_update);
     }
 
@@ -228,7 +229,7 @@ PRIVATE vdhcpd_cfg_t *vdhcpd_cfg_reload()
     //加载DHCP服务
     dhcpd_server_reload(cfg_main);
     dhcpd_server_check(cfg_main);
-    dhcpd_server_update(cfg_main);
+    dhcpd_server_update(cfg_main, NULL);
     //加载MAC地址列表
     macaddr_acl_reload(cfg_main);
     macaddr_acl_check(cfg_main);

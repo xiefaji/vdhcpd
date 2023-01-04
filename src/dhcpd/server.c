@@ -2,6 +2,7 @@
 
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server);
+PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_queue_t *pRecycleTrash);
 PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server);
@@ -178,7 +179,7 @@ PUBLIC void dhcpd_server_check(void *cfg)
 }
 
 //配置热更新
-PUBLIC void dhcpd_server_update(void *cfg)
+PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     struct key_node *knode = key_first(&cfg_main->key_servers);
@@ -186,6 +187,7 @@ PUBLIC void dhcpd_server_update(void *cfg)
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
         dhcpd_upate_iface(dhcpd_server);//
         dhcpd_upate_iface_lineip(dhcpd_server);
+        dhcpd_upate_iface_lineip_all(dhcpd_server, pRecycleTrash);
         dhcpd_upate_iface_lineip6(dhcpd_server);
         dhcpd_upate_relay4_iface(dhcpd_server);
         dhcpd_upate_relay6_iface(dhcpd_server);
@@ -267,6 +269,93 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
         inet_pton(AF_INET, ipaddr, &lineip);
         dhcpd_server->iface.ipaddr = lineip;
     }
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_Destroy(&Query);
+}
+
+//读取线路网关IP[v4] ALL
+typedef struct {
+    ip4_address_t gateway;
+    ip4_address_t netmask;
+} ip4_gateway_t;
+
+PRIVATE ip4_gateway_t* ip4_gateway_init(const char *szIP, const int nPrefix)
+{
+    ip4_gateway_t *ip4_gateway = (ip4_gateway_t *)xmalloc(sizeof(ip4_gateway_t));
+    BZERO(ip4_gateway, sizeof(ip4_gateway_t));
+    inet_pton(AF_INET, szIP, &ip4_gateway->gateway);
+    ip4_gateway->netmask.address = get_netmask(nPrefix);
+    return ip4_gateway;
+}
+
+PRIVATE void ip4_gateway_release(void *p)
+{
+    ip4_gateway_t *ip4_gateway = (ip4_gateway_t *)p;
+    if (ip4_gateway) xfree(ip4_gateway);
+}
+
+PRIVATE void ip4_gateway_recycle(void *p, trash_queue_t *pRecycleTrash)
+{
+    ip4_gateway_t *ip4_gateway = (ip4_gateway_t *)p;
+    if (ip4_gateway) trash_queue_enqueue(pRecycleTrash, ip4_gateway);
+}
+
+PUBLIC int iface_subnet_match(dhcpd_server_t *dhcpd_server, const ip4_address_t ipaddr)
+{
+    int retcode = 0;
+    if (!dhcpd_server->iface.key_all_lineip4 || !ipaddr.address)
+        return 1;//默认放行
+
+    struct key_node *knode = key_first(dhcpd_server->iface.key_all_lineip4);
+    while (knode && knode->data) {
+        ip4_gateway_t *ip4_gateway = (ip4_gateway_t *)knode->data;
+        if (IPv4_SUBNET(&ipaddr, &ip4_gateway->netmask) == IPv4_SUBNET(&ip4_gateway->gateway, &ip4_gateway->netmask)) {
+            retcode = 1;
+            break;
+        }
+        key_next(knode);
+    }
+    return retcode;
+}
+
+PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_queue_t *pRecycleTrash)
+{
+    char sql[MINBUFFERLEN+1]={0};
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP, a.nPrefix FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=4;", dhcpd_server->nLineID);
+
+    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYSQLRECORDSET Query={0};
+    CSqlRecorDset_Init(&Query);
+    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_CloseRec(&Query);
+    CSqlRecorDset_ExecSQL(&Query, sql);
+
+    struct key_tree *temp = dhcpd_server->iface.key_all_lineip4;
+    struct key_tree *key_all_lineip4 = (struct key_tree *)xmalloc(sizeof(struct key_tree));
+    key_tree_init(key_all_lineip4);
+
+    for (int idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
+        char szIP[MINNAMELEN+1]={0};
+        int nPrefix;
+        CSqlRecorDset_GetFieldValue_I32(&Query, "nPrefix", &nPrefix);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIP", szIP, MINNAMELEN);
+        ip4_gateway_t *ip4_gateway = ip4_gateway_init(szIP, nPrefix);
+        struct key_node *knode = key_rbinsert(key_all_lineip4, ip4_gateway->gateway.address, ip4_gateway);
+        if (knode) ip4_gateway_release(ip4_gateway);
+        CSqlRecorDset_MoveNext(&Query);
+    }
+
+    dhcpd_server->iface.key_all_lineip4 = key_all_lineip4;
+    if (temp) {
+        if (pRecycleTrash) {
+            key_tree_nodes_recycle(temp, pRecycleTrash, ip4_gateway_recycle);
+            trash_queue_enqueue(pRecycleTrash, temp);
+        } else {
+            key_tree_destroy2(temp, ip4_gateway_release);
+            xfree(temp);
+        }
+    }
+
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
 }

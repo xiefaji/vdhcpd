@@ -167,6 +167,7 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
 
 PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
+    vdhcpd_main_t *vdm = packet_process->vdm;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcp_packet_t *request = &packet_process->request;
     struct dhcpv4_message *req = request->payload;
@@ -219,6 +220,14 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
             userclass_len = opt->len;
             BCOPY(opt->data, userclass, opt->len);
         }
+    }
+
+    if (vdm->filter_subnet) {
+        if (request->v4.msgcode != DHCPV4_MSG_REQUEST &&!iface_subnet_match(dhcpd_server, req->ciaddr))
+            return -1;
+
+        if (request->v4.msgcode != DHCPV4_MSG_DISCOVER && !iface_subnet_match(dhcpd_server, request->v4.reqaddr))
+            return -1;
     }
 
     if (request->v4.msgcode == DHCPV4_MSG_DISCOVER) BZERO(&realtime_info->v4, sizeof(realtime_info->v4));
