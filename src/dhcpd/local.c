@@ -223,7 +223,7 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
     }
 
     if (vdm->filter_subnet) {
-        if (request->v4.msgcode != DHCPV4_MSG_REQUEST &&!iface_subnet_match(dhcpd_server, req->ciaddr))
+        if (request->v4.msgcode == DHCPV4_MSG_REQUEST && !iface_subnet_match(dhcpd_server, req->ciaddr))
             return -1;
 
         if (request->v4.msgcode != DHCPV4_MSG_DISCOVER && !iface_subnet_match(dhcpd_server, request->v4.reqaddr))

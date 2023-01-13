@@ -313,7 +313,7 @@ PUBLIC int iface_subnet_match(dhcpd_server_t *dhcpd_server, const ip4_address_t 
             retcode = 1;
             break;
         }
-        key_next(knode);
+        knode = key_next(knode);
     }
     return retcode;
 }

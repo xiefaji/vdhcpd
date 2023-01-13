@@ -181,7 +181,7 @@ PUBLIC int create_udp_socket6(const unsigned short listenport, int local, int ti
 
 PUBLIC int create_raw_socket(int timeout, int reuseport, const char *ifname)
 {
-    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    int sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
     if (sock < 0) {
         x_log_warn("%s : 创建socket失败[%s].", __FUNCTION__, strerror(errno));
         return -1;
