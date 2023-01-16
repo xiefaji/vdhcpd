@@ -201,7 +201,7 @@ PUBLIC realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash)
 
     realtime_info_t *realtime_info = realtime_search(packet_process);
     if (!realtime_info) {
-        if (KEY_TREE_NODES(&stats_main->key_realtime) >= 500000) {
+        if (KEY_TREE_NODES(&stats_main->key_realtime) >= 1000000) {
             x_log_warn("%s:%d 实时终端数量超限.", __FUNCTION__, __LINE__);
             return NULL;
         }
@@ -301,8 +301,8 @@ PRIVATE void realtime_info_save_finger(realtime_info_t *realtime_info, FILE *pFI
 
         }
 
-        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"finger4\":\"%s\",\"finger6\":\"%s\",\"leasetime4\":%u,\"leasetime6\":%u}\r\n",
-                MACADDRBYTES(realtime_info->key.u.macaddr), finger4, finger6, realtime_info->v4.leasetime, realtime_info->v6.leasetime);
+        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"ovlanid\":%u,\"ivlanid\":%u,\"finger4\":\"%s\",\"finger6\":\"%s\",\"leasetime4\":%u,\"leasetime6\":%u}\r\n",
+                MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->ovlanid, realtime_info->ivlanid, finger4, finger6, realtime_info->v4.leasetime, realtime_info->v6.leasetime);
     }
 }
 
