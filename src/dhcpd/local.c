@@ -230,7 +230,7 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
             return -1;
     }
 
-    if (request->v4.msgcode == DHCPV4_MSG_DISCOVER) BZERO(&realtime_info->v4, sizeof(realtime_info->v4));
+    if (request->v4.msgcode == DHCPV4_MSG_DISCOVER) { BZERO(&realtime_info->v4, sizeof(realtime_info->v4)); SET_COUNTER(realtime_info->starttick); }
     if (hostname_len) { BCOPY(hostname, realtime_info->v4.hostname, MAXNAMELEN); realtime_info->v4.hostname_len = hostname_len; }
     if (reqopts_len) { BCOPY(reqopts, realtime_info->v4.reqopts, MAXNAMELEN); realtime_info->v4.reqopts_len = reqopts_len; }
     if (vendorname_len) { BCOPY(vendorname, realtime_info->v4.vendorname, MAXNAMELEN); realtime_info->v4.vendorname_len = vendorname_len; }
@@ -328,7 +328,7 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
         return -1;
 
     request->v6.msgcode = req->msg_type;
-    if (request->v6.msgcode == DHCPV6_MSG_SOLICIT) BZERO(&realtime_info->v6, sizeof(realtime_info->v6));
+    if (request->v6.msgcode == DHCPV6_MSG_SOLICIT) { BZERO(&realtime_info->v6, sizeof(realtime_info->v6)); SET_COUNTER(realtime_info->starttick); }
     if (duid_len) { BCOPY(duid, realtime_info->v6.duid, MAXNAMELEN); realtime_info->v6.duid_len = duid_len; }
     if (hostname_len) { BCOPY(hostname, realtime_info->v6.hostname, MAXNAMELEN); realtime_info->v6.hostname_len = hostname_len; }
     if (reqopts_len) { BCOPY(reqopts, realtime_info->v6.reqopts, MAXNAMELEN); realtime_info->v6.reqopts_len = reqopts_len; }

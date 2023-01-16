@@ -58,6 +58,7 @@ PRIVATE realtime_info_t *realtime_info_init(const packet_process_t *packet_proce
     realtime_info->ivlanid = ipcsharehdr->inner_vlanid;
     realtime_info->sessionid = ipcsharehdr->session;
     realtime_info->starttime = time(NULL);
+    SET_COUNTER(realtime_info->starttick);
     key_tree_init(&realtime_info->key_tickcount);
     return realtime_info;
 }
@@ -201,7 +202,7 @@ PUBLIC realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash)
 
     realtime_info_t *realtime_info = realtime_search(packet_process);
     if (!realtime_info) {
-        if (KEY_TREE_NODES(&stats_main->key_realtime) >= 1000000) {
+        if (KEY_TREE_NODES(&stats_main->key_realtime) >= 500000) {
             x_log_warn("%s:%d 实时终端数量超限.", __FUNCTION__, __LINE__);
             return NULL;
         }
@@ -334,7 +335,14 @@ PUBLIC void stats_main_maintain(vdhcpd_stats_t *stats_main, trash_queue_t *pRecy
 
         realtime_info_save_finger(realtime_info, pFILE);//指纹存储
 
-        knode = key_next(knode);
+        if (CMP_COUNTER(realtime_info->starttick, 30) && !RLTINFO_IS_EXPIRE(realtime_info)) {
+            key_tree_lock(&stats_main->key_realtime);
+            knode = key_rberase_EX(&stats_main->key_realtime, knode, pRecycleTrash, trash_queue_enqueue2);
+            key_tree_unlock(&stats_main->key_realtime);
+            realtime_info_recycle(realtime_info, pRecycleTrash);
+        } else {
+            knode = key_next(knode);
+        }
     }
 
     if (pFILE) { fflush(pFILE); fclose(pFILE); rename(filename, path_cfg.fingerfile); }
