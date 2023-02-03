@@ -90,6 +90,7 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
     realtime_info->v4.leasetime = leasetime;
     realtime_info->v4.ipaddr = rep->yiaddr;
     if (request->v4.msgcode == DHCPV4_MSG_ACK) {
+        SET_COUNTER(realtime_info->updatetick);
         realtime_info->flags |= RLTINFO_FLAGS_RELAY4;
         __sync_fetch_and_add(&realtime_info->update_db4, 1);
     }

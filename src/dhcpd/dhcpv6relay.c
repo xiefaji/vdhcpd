@@ -147,6 +147,7 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
     realtime_info->v6.leasetime = request->v6.leasetime;
     realtime_info->v6.ipaddr = request->v6.ipaddr;
     if (request->v6.msgcode == DHCPV6_MSG_REPLY) {
+        SET_COUNTER(realtime_info->updatetick);
         realtime_info->flags |= RLTINFO_FLAGS_RELAY6;
         __sync_fetch_and_add(&realtime_info->update_db6, 1);
     }

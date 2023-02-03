@@ -343,6 +343,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
         realtime_info->v4.leasetime = request->v4.leasetime;
         realtime_info->v4.ipaddr = rep.yiaddr;
         if (reply->v4.msgcode == DHCPV4_MSG_ACK) {
+            SET_COUNTER(realtime_info->updatetick);
             realtime_info->flags |= RLTINFO_FLAGS_SERVER4;
             __sync_fetch_and_add(&realtime_info->update_db4, 1);
         }

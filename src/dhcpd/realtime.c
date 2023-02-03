@@ -335,7 +335,8 @@ PUBLIC void stats_main_maintain(vdhcpd_stats_t *stats_main, trash_queue_t *pRecy
 
         realtime_info_save_finger(realtime_info, pFILE);//指纹存储
 
-        if (CMP_COUNTER(realtime_info->starttick, 30) && !RLTINFO_IS_EXPIRE(realtime_info)) {
+        if ((RLTINFO_IS_EXPIRED(realtime_info) && CMP_COUNTER(realtime_info->starttick, 30) /*分配IP超时*/) ||
+                (!RLTINFO_IS_EXPIRED(realtime_info) && CMP_COUNTER(realtime_info->updatetick, RLTINFO_MAX_LEASETIME(realtime_info))/*租约超时*/)) {
             key_tree_lock(&stats_main->key_realtime);
             knode = key_rberase_EX(&stats_main->key_realtime, knode, pRecycleTrash, trash_queue_enqueue2);
             key_tree_unlock(&stats_main->key_realtime);

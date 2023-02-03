@@ -43,7 +43,8 @@ typedef struct {
         u32 leasetime;//租约时长
     } v6;
 
-    time_t starttime,starttick;
+    time_t starttime;//租约启动时间
+    time_t starttick,updatetick;//最近一次协商开始/成功时间
 #define RLTINFO_FLAGS_RELAY4 (1 << 0)
 #define RLTINFO_FLAGS_RELAY6 (1 << 1)
 #define RLTINFO_FLAGS_SERVER4 (1 << 2)
@@ -61,9 +62,10 @@ typedef struct {
 #define RLTINFO_IS_SERVER6(r) (((r)->flags & RLTINFO_FLAGS_SERVER6) ? 1:0)
 #define RLTINFO_IS_STATIC4(r) (((r)->flags & RLTINFO_FLAGS_STATIC4) ? 1:0)
 #define RLTINFO_IS_STATIC6(r) (((r)->flags & RLTINFO_FLAGS_STATIC6) ? 1:0)
-#define RLTINFO_IS_EXPIRE(r) (((r)->flags & (RLTINFO_FLAGS_RELAY4 | RLTINFO_FLAGS_RELAY6 | RLTINFO_FLAGS_SERVER4 | RLTINFO_FLAGS_SERVER6)) ? 1:0)
+#define RLTINFO_IS_EXPIRED(r) (((r)->flags & (RLTINFO_FLAGS_RELAY4 | RLTINFO_FLAGS_RELAY6 | RLTINFO_FLAGS_SERVER4 | RLTINFO_FLAGS_SERVER6)) ? 0:1)//
 #define RLTINFO_EXPIRETIME4(r) (u32)((r)->v4.leasetime ? ((r)->v4.leasetime + (u32)time(NULL)):0)
 #define RLTINFO_EXPIRETIME6(r) (u32)((r)->v6.leasetime ? ((r)->v6.leasetime + (u32)time(NULL)):0)
+#define RLTINFO_MAX_LEASETIME(r) ((u32)MAX((r)->v4.leasetime, (r)->v6.leasetime))
 PUBLIC_DATA void realtime_info_oth_update(realtime_info_t *realtime_info, const int ipv4);
 PUBLIC_DATA realtime_info_t *realtime_search(void *p);
 PUBLIC_DATA realtime_info_t *realtime_search_macaddr(const mac_address_t macaddr);
