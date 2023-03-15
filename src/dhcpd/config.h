@@ -1,17 +1,30 @@
 #ifndef _dhcp_config_h
 #define _dhcp_config_h
 #define PACKAGE_NAME "DHCP Daemon"
-#define PACKAGE_VERSION "2023020301"
+#define PACKAGE_VERSION "2023031601"
 #define PACKAGE_MODULES "DHCP服务端"
 
 //默认配置路径
-#define PATH_CONFILE  "/xspeeder/vdhcpd.conf"
 #define PATH_LOGFILE  "/var/log/vdhcpd.log"
 #define PATH_LOCKFILE "/var/run/xsdhcp.lock"
 #define PATH_PIDFILE "/var/run/xsdhcp.pid"
-#define PATH_FILTERFILE "/xspeeder/dhcpd.filter"
 #define PATH_FINGERFILE "/opt/dhcpd.finger"
+#ifndef VERSION_VNAAS
+#define PATH_CONFILE  "/xspeeder/vdhcpd.conf"
+#define PATH_FILTERFILE "/xspeeder/dhcpd.filter"
+#else
+#define PATH_CONFILE  "/vrouter/vdhcpd.conf"
+#define PATH_FILTERFILE "/vrouter/dhcpd.filter"
+#endif
+
+//数据库定义
+#ifndef VERSION_VNAAS
 #define DEFAULT_DBNAME "xspeeder"
+#define DBTABLE_DHCP_SERVER "tbdhcpconfig"
+#else
+#define DEFAULT_DBNAME "vnaaspop"
+#define DBTABLE_DHCP_SERVER "tbdhcpserver"
+#endif
 
 #include "share/defines.h"
 #include "share/types.h"

@@ -32,13 +32,13 @@ PUBLIC bool MysqlBase_OpenDB(PMYSQLBASE pDB,const char *username,const char *pas
 {
     pDB->m_con = mysql_init((MYSQL*) 0);
     if (!pDB->m_con) {
-//        x_log_warn("%s : 数据库句柄初始化失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
+        x_log_warn("%s : 数据库句柄初始化失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
         return false;
     }
 
     //mysql_options(m_con, MYSQL_OPT_CONNECT_TIMEOUT , "10");
     if (!mysql_real_connect(pDB->m_con,serverip,username,password,dbname,port,NULL,0)) {
-//        x_log_warn("%s : 数据库连接失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
+        x_log_warn("%s : 数据库连接失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
         return false;
     }
     //mysql_options(m_con, MYSQL_OPT_RECONNECT, "1");

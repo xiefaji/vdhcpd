@@ -121,10 +121,17 @@ PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
 {
     db_event_t *db_event = db_event_init(DPF_NORMAL);
     char sql[MINBUFFERLEN+1]={0};
+#ifndef VERSION_VNAAS
     int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbserverinfo (`server`,`ver`,`start`,`pid`) "
                                           "VALUES ('xsdhcp','"PACKAGE_VERSION"',%u,%u) "
                                           "ON DUPLICATE KEY UPDATE `ver`='"PACKAGE_VERSION"',`start`=%u,`pid`=%u;",
                        (u32)time(NULL), getpid(), (u32)time(NULL), getpid());
+#else
+    int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbservice_info (`szService`,`szVersion`,`dStart`,`nPid`) "
+                                          "VALUES ('vnass_dhcpd','"PACKAGE_VERSION"',CURRENT_TIMESTAMP(),%u) "
+                                          "ON DUPLICATE KEY UPDATE `szVersion`='"PACKAGE_VERSION"',`dStart`=CURRENT_TIMESTAMP(),`nPid`=%u;",
+                       getpid(), getpid());
+#endif
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }

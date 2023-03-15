@@ -10,6 +10,9 @@ QMAKE_CFLAGS += -Wno-unused
 DESTDIR = ./bin
 
 DEFINES += _GNU_SOURCE
+#开启宏表示新架构
+DEFINES += VERSION_VNAAS
+
 INCLUDEPATH += src
 LIBS += -lpthread -ldl -lz
 LIBS += -ljemalloc -lresolv

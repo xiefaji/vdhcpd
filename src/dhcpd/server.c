@@ -45,7 +45,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpconfig;");
+    snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_SERVER);
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -61,6 +61,9 @@ PUBLIC void dhcpd_server_reload(void *cfg)
 
         dhcpd_server_t *dhcpd_server = dhcpd_server_init();
         dhcpd_server->cfg_main = cfg_main;
+
+        //基础配置
+#ifndef VERSION_VNAAS
         CSqlRecorDset_GetFieldValue_U32(&Query, "id", &dhcpd_server->nID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_server->nLineID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "enable", &dhcpd_server->nEnabled);
@@ -70,8 +73,20 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         dhcpd_server->pQINQ = GetVLAN_BITMASK(QINQ, strlen(QINQ), 0);
         CSqlRecorDset_GetFieldValue_U32(&Query, "stack", &dhcpd_server->mode);
         CSqlRecorDset_GetFieldValue_U32(&Query, "leasetime", &dhcpd_server->leasetime);
+#else
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nID", &dhcpd_server->nID);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nSwID", &dhcpd_server->nLineID);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nEnable", &dhcpd_server->nEnabled);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szOutVlan", VLAN, MAXNAMELEN);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szInVlan", QINQ, MAXNAMELEN);
+        dhcpd_server->pVLAN = GetVLAN_BITMASK(VLAN, strlen(VLAN), 0);
+        dhcpd_server->pQINQ = GetVLAN_BITMASK(QINQ, strlen(QINQ), 0);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nStack", &dhcpd_server->mode);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nLeaseTime", &dhcpd_server->leasetime);
+#endif
 
-        //DHCPV4配置
+        //DHCPV4服务器配置
+#ifndef VERSION_VNAAS
         CSqlRecorDset_GetFieldValue_U32(&Query, "ip_low", &val32);
         dhcpd_server->dhcpv4.startip.address = htonl(val32);
         CSqlRecorDset_GetFieldValue_U32(&Query, "ip_up", &val32);
@@ -90,8 +105,29 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         dhcpd_server->dhcpv4.windns[0].address = htonl(val32);
         CSqlRecorDset_GetFieldValue_U32(&Query, "wins2", &val32);
         dhcpd_server->dhcpv4.windns[1].address = htonl(val32);
+#else
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIPLow", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.startip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIPUp", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.endip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szGateWay", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.gateway);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szMask", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.netmask);
+        //CSqlRecorDset_GetFieldValue_U32(&Query, "broadcast", &val32);
+        //dhcpd_server->dhcpv4.broadcast.address = htonl(val32);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szDns1", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.dns[0]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szDns2", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.dns[1]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szWins1", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.windns[0]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szWins2", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.windns[1]);
+#endif
 
-        //DHCPV6配置
+        //DHCPV6服务器配置
+#ifndef VERSION_VNAAS
         CSqlRecorDset_GetFieldValue_String(&Query, "ip6_low", tmpbuffer, MINNAMELEN);
         inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.startip);
         CSqlRecorDset_GetFieldValue_String(&Query, "ip6_up", tmpbuffer, MINNAMELEN);
@@ -103,8 +139,22 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[0]);
         CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6dns2", tmpbuffer, MINNAMELEN);
         inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[1]);
+#else
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIP6Low", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.startip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szIP6Up", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.endip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szGateWay6", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.gateway);
+        CSqlRecorDset_GetFieldValue_U16(&Query, "szPrefix", &dhcpd_server->dhcpv6.prefix);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szDns6_1", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[0]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szDns6_2", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[1]);
+#endif
 
         //DHCP中继配置
+#ifndef VERSION_VNAAS
         CSqlRecorDset_GetFieldValue_String(&Query, "identifier", dhcpd_server->dhcprelay.identifier, MINNAMELEN);
         CSqlRecorDset_GetFieldValue_U32(&Query, "subnet", &val32);
         dhcpd_server->dhcprelay.v4.subnet.address = htonl(val32);
@@ -118,11 +168,32 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_U16(&Query, "upstream_port_v6", &val16);
         dhcpd_server->dhcprelay.v6.serverport = htons(val16);
         CSqlRecorDset_GetFieldValue_U32(&Query, "outerlineid_v6", &dhcpd_server->dhcprelay.v6.lineid);
+#else
+        //CSqlRecorDset_GetFieldValue_String(&Query, "identifier", dhcpd_server->dhcprelay.identifier, MINNAMELEN);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSubnet", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcprelay.v4.subnet);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP4", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcprelay.v4.serverip);
+        CSqlRecorDset_GetFieldValue_U16(&Query, "szProxySerIP4", &val16);
+        dhcpd_server->dhcprelay.v4.serverport = htons(val16);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nTxSw4ID", &dhcpd_server->dhcprelay.v4.lineid);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP4", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcprelay.v4.serverip);
+        CSqlRecorDset_GetFieldValue_U16(&Query, "nProxySerPort6", &val16);
+        dhcpd_server->dhcprelay.v6.serverport = htons(val16);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nTxSw6ID", &dhcpd_server->dhcprelay.v6.lineid);
+#endif
 
         //MAC控制
+#ifndef VERSION_VNAAS
         CSqlRecorDset_GetFieldValue_U32(&Query, "aclmode", &dhcpd_server->macctl.aclmode);
         CSqlRecorDset_GetFieldValue_String(&Query, "macgroup", tmpbuffer, MINNAMELEN);
         ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
+#else
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nAclMode", &dhcpd_server->macctl.aclmode);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szMacGroups", tmpbuffer, MINNAMELEN);
+        ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
+#endif
 
         struct key_node *knode = key_rbinsert(&cfg_main->key_servers, dhcpd_server->nID, dhcpd_server);
         if (knode) {
@@ -199,8 +270,13 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.driveid,b.name,b.networkcard,b.groupid,b.kind,b.mtu,b.vmac FROM tbinterface a JOIN tbinterfaceline b "
-                                "WHERE a.id = b.networkcard and b.lineid=%u;", dhcpd_server->nLineID);
+#ifndef VERSION_VNAAS
+    snprintf(sql, MINBUFFERLEN, "SELECT a.driveid,b.name,b.networkcard,b.mtu,b.vmac FROM tbinterface a JOIN tbinterfaceline b "
+                                "WHERE a.id = b.networkcard and b.lineid = %u;", dhcpd_server->nLineID);
+#else
+    snprintf(sql, MINBUFFERLEN, "SELECT a.nSwID AS lineid,a.nHwDevID AS driveid,a.szName AS name,b.nMtu AS mtu,b.szVMac AS vmac FROM tbsw_if a JOIN tbsw_if_eth b "
+                                "WHERE a.nSwID = b.nSwID AND a.nSwID = %u;", dhcpd_server->nLineID);
+#endif
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -209,7 +285,6 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (CSqlRecorDset_GetRecordCount(&Query)) {
-        u16 val16;
         u32 val32;
         char ifname[MINNAMELEN+1];
         char macaddr[MINNAMELEN+1];
@@ -218,12 +293,6 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
         dhcpd_server->iface.driveid = val32;
         CSqlRecorDset_GetFieldValue_String(&Query, "name", ifname, MINNAMELEN);
         BCOPY(ifname, (char *)dhcpd_server->iface.ifname, MINNAMELEN);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "networkcard", &val32);
-        dhcpd_server->iface.networkcard = val32;
-        CSqlRecorDset_GetFieldValue_U16(&Query, "groupid", &val16);
-        dhcpd_server->iface.groupid = val16;
-        CSqlRecorDset_GetFieldValue_U32(&Query, "kind", &val32);
-        dhcpd_server->iface.kind = val32;
         CSqlRecorDset_GetFieldValue_U32(&Query, "mtu", &val32);
         dhcpd_server->iface.mtu = val32;
         CSqlRecorDset_GetFieldValue_String(&Query, "vmac", macaddr, MINNAMELEN);
@@ -248,7 +317,11 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
 PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=4;", dhcpd_server->nLineID);
+#ifndef VERSION_VNAAS
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 4;", dhcpd_server->nLineID);
+#else
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPVer = 4;", dhcpd_server->nLineID);
+#endif
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -258,7 +331,11 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
         BZERO(sql, sizeof(sql));
-        snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->nLineID);
+#ifndef VERSION_VNAAS
+        snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->nLineID);
+#else
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP4 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->nLineID);
+#endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
 
@@ -321,7 +398,11 @@ PUBLIC int iface_subnet_match(dhcpd_server_t *dhcpd_server, const ip4_address_t 
 PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_queue_t *pRecycleTrash)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP, a.nPrefix FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=4;", dhcpd_server->nLineID);
+#ifndef VERSION_VNAAS
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP, a.nPrefix FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 4;", dhcpd_server->nLineID);
+#else
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP, a.nPrefix FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPVer = 4;", dhcpd_server->nLineID);
+#endif
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -364,7 +445,11 @@ PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_qu
 PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=6;", dhcpd_server->nLineID);
+#ifndef VERSION_VNAAS
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 6;", dhcpd_server->nLineID);
+#else
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPVer = 6;", dhcpd_server->nLineID);
+#endif
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -374,7 +459,11 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
         BZERO(sql, sizeof(sql));
+#ifndef VERSION_VNAAS
         snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->nLineID);
+#else
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP6 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->nLineID);
+#endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
 
@@ -395,10 +484,17 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
 PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=4"
+#ifndef VERSION_VNAAS
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 4"
                                 "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
                                 "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
              dhcpd_server->dhcprelay.v4.lineid, ntohl(dhcpd_server->dhcprelay.v4.serverip.address));
+#else
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPver = 4 "
+                                "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
+                                "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
+             dhcpd_server->dhcprelay.v4.lineid, ntohl(dhcpd_server->dhcprelay.v4.serverip.address));
+#endif
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};
@@ -408,7 +504,11 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
         BZERO(sql, sizeof(sql));
-        snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->dhcprelay.v4.lineid);
+#ifndef VERSION_VNAAS
+        snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->dhcprelay.v4.lineid);
+#else
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP4 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->dhcprelay.v4.lineid);
+#endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
 
@@ -427,7 +527,7 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-//    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid=%u and nIPver=6"
+//    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 6"
 //                                "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
 //                                "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
 //             dhcpd_server->dhcprelay.v6.lineid, ntohl(dhcpd_server->dhcprelay.v6.serverip.address));
@@ -440,7 +540,11 @@ PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
         BZERO(sql, sizeof(sql));
-        snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->dhcprelay.v6.lineid);
+#ifndef VERSION_VNAAS
+        snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->dhcprelay.v6.lineid);
+#else
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP6 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->dhcprelay.v6.lineid);
+#endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
 

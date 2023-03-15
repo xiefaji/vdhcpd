@@ -15,6 +15,7 @@ typedef union {
 typedef struct {
     realtime_key_t key;//61
     u32 lineid;
+    u16 vlanproto[2];// hostbit
     u16 ovlanid,ivlanid;//VLAN/QINQ hostbit
     u16 sessionid;
     struct {

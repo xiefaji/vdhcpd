@@ -49,14 +49,15 @@ PRIVATE void realtime_tick_update(realtime_info_t *realtime_info)
 
 PRIVATE realtime_info_t *realtime_info_init(const packet_process_t *packet_process)
 {
-    const ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     realtime_info_t *realtime_info = (realtime_info_t *)xmalloc(sizeof(realtime_info_t));
     BZERO(realtime_info, sizeof(realtime_info_t));
     BCOPY(&packet_process->macaddr, &realtime_info->key.u.macaddr, sizeof(mac_address_t));
-    realtime_info->lineid = ipcsharehdr->lineid;
-    realtime_info->ovlanid = ipcsharehdr->outer_vlanid;
-    realtime_info->ivlanid = ipcsharehdr->inner_vlanid;
-    realtime_info->sessionid = ipcsharehdr->session;
+    realtime_info->lineid = packet_process->dpi.lineid;
+    realtime_info->ovlanid = packet_process->dpi.vlanid[0];
+    realtime_info->ivlanid = packet_process->dpi.vlanid[1];
+    realtime_info->vlanproto[0] = packet_process->dpi.vlanproto[0];
+    realtime_info->vlanproto[1] = packet_process->dpi.vlanproto[1];
+    realtime_info->sessionid = packet_process->dpi.sessionid;
     realtime_info->starttime = time(NULL);
     SET_COUNTER(realtime_info->starttick);
     key_tree_init(&realtime_info->key_tickcount);
@@ -68,16 +69,19 @@ PRIVATE void realtime_info_update(realtime_info_t *realtime_info, realtime_info_
     realtime_info->lineid = realtime_tmp->lineid;
     realtime_info->ovlanid = realtime_tmp->ovlanid;
     realtime_info->ivlanid = realtime_tmp->ivlanid;
+    realtime_info->vlanproto[0] = realtime_tmp->vlanproto[0];
+    realtime_info->vlanproto[1] = realtime_tmp->vlanproto[1];
     realtime_info->sessionid = realtime_tmp->sessionid;
 }
 
 PRIVATE void realtime_info_update2(const packet_process_t *packet_process, realtime_info_t *realtime_info)
 {
-    const ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
-    realtime_info->lineid = ipcsharehdr->lineid;
-    realtime_info->ovlanid = ipcsharehdr->outer_vlanid;
-    realtime_info->ivlanid = ipcsharehdr->inner_vlanid;
-    realtime_info->sessionid = ipcsharehdr->session;
+    realtime_info->lineid = packet_process->dpi.lineid;
+    realtime_info->ovlanid = packet_process->dpi.vlanid[0];
+    realtime_info->ivlanid = packet_process->dpi.vlanid[1];
+    realtime_info->vlanproto[0] = packet_process->dpi.vlanproto[0];
+    realtime_info->vlanproto[1] = packet_process->dpi.vlanproto[1];
+    realtime_info->sessionid = packet_process->dpi.sessionid;
 }
 
 PUBLIC void realtime_info_oth_update(realtime_info_t *realtime_info, const int ipv4)

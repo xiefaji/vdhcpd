@@ -103,8 +103,8 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 //TX
 PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
 {
-    ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
+    realtime_info_t *realtime_info = packet_process->realtime_info;
     dhcp_packet_t *request = &packet_process->request;
 
     char buffer[MAXBUFFERLEN+1]={0};
@@ -134,8 +134,8 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     struct agent_infomation_t *agent_information = (struct agent_infomation_t *)agent_buffer;
     agent_information->opt_circuitid.type = 1;
     agent_information->opt_circuitid.len = sizeof(dhcpv4_option_vlan_t);
-    agent_information->circuitid.u.vlanid = htons(ipcsharehdr->outer_vlanid);
-    agent_information->circuitid.u.qinqid = htons(ipcsharehdr->inner_vlanid);
+    agent_information->circuitid.u.vlanid = htons(realtime_info->ovlanid);
+    agent_information->circuitid.u.qinqid = htons(realtime_info->ivlanid);
     agent_information->opt_remoteid.type = 2;
     agent_information->opt_remoteid.len = sizeof(mac_address_t);
     BCOPY(&dhcpd_server->iface.macaddr, &agent_information->remoteid, sizeof(mac_address_t));
@@ -166,9 +166,7 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     pIPHeader->check = 0;
     pIPHeader->saddr = dhcpd_server->dhcprelay.v4.lineip.address;
     pIPHeader->daddr = dhcpd_server->dhcprelay.v4.serverip.address;
-
-    //计算校验和
-    WinDivertHelperCalcChecksums(buffer, length, 0);
+    WinDivertHelperCalcChecksums(buffer, length, 0);//计算校验和
 
     struct sockaddr_in sto;
     sto.sin_family = AF_INET;
@@ -188,12 +186,35 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
 
     char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
+#ifndef VERSION_VNAAS
     ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
     struct iphdr *pIPHeader = (struct iphdr *)&ipcsharehdr->pdata[offset];
     offset += sizeof(struct iphdr);
     struct udphdr *pUDPHeader = (struct udphdr *)&ipcsharehdr->pdata[offset];
     offset += sizeof(struct udphdr);
     u8 *payload = (u8 *)&ipcsharehdr->pdata[offset];
+#else
+    uipc_task_t *ipctaskhdr = (uipc_task_t *)buffer;
+    offset += sizeof(uipc_task_t);
+    dhcp_external_proc_hdr_t *ephdr = (dhcp_external_proc_hdr_t *)&buffer[offset];
+    offset += sizeof(dhcp_external_proc_hdr_t);
+    struct ether_header *ethhdr = (struct ether_header *)&buffer[offset];
+    offset += sizeof(struct ether_header);
+    ethernet_vlan_header_next_tv_t *pOVLANHDR = NULL, *pIVLANHDR = NULL;
+    if (realtime_info->ovlanid) {
+        pOVLANHDR = (ethernet_vlan_header_next_tv_t *)&buffer[offset];
+        offset += sizeof(ethernet_vlan_header_next_tv_t);
+        if (realtime_info->ivlanid) {
+            pIVLANHDR = (ethernet_vlan_header_next_tv_t *)&buffer[offset];
+            offset += sizeof(ethernet_vlan_header_next_tv_t);
+        }
+    }
+    struct iphdr *pIPHeader = (struct iphdr *)&buffer[offset];
+    offset += sizeof(struct iphdr);
+    struct udphdr *pUDPHeader = (struct udphdr *)&buffer[offset];
+    offset += sizeof(struct udphdr);
+    u8 *payload = (u8 *)&buffer[offset];
+#endif
 
     //DHCP报文封装
     BCOPY(request->relay_payload, payload, request->relay_payload_len);
@@ -219,9 +240,9 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     pIPHeader->check = 0;
     pIPHeader->saddr = dhcpd_server->dhcpv4.gateway.address ? dhcpd_server->dhcpv4.gateway.address:dhcpd_server->iface.ipaddr.address;
     pIPHeader->daddr = rep->yiaddr.address;
+    WinDivertHelperCalcChecksums(pIPHeader, length, 0);//计算校验和
 
-    WinDivertHelperCalcChecksums(pIPHeader, length, 0);
-
+#ifndef VERSION_VNAAS
     //封装IPC Header
     ipcsharehdr->process = DEFAULT_DHCPv4_PROCESS;
     ipcsharehdr->code = CODE_REPLY;//1
@@ -235,11 +256,47 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     else BCOPY(realtime_info->key.u.macaddr.addr, ipcsharehdr->ethhdr.ether_dhost, ETH_ALEN);
     BCOPY(dhcpd_server->iface.macaddr.addr, ipcsharehdr->ethhdr.ether_shost, ETH_ALEN);
     ipcsharehdr->ethhdr.ether_type = htons(ETH_P_IP);
+    length += sizeof(ipcshare_hdr_t);
+#else
+    //封装Ether Header
+    u16 l3_offset = 0;
+    if (DHCPV4_FLAGS_BROADCAST(rep)) memset(ethhdr->ether_dhost, 0xFF, ETH_ALEN);
+    else BCOPY(realtime_info->key.u.macaddr.addr, ethhdr->ether_dhost, ETH_ALEN);
+    BCOPY(dhcpd_server->iface.macaddr.addr, ethhdr->ether_shost, ETH_ALEN);
+    ethhdr->ether_type = htons(ETH_P_IP);
+    length += sizeof(struct ether_header);
+    l3_offset += sizeof(struct ether_header);
+    if (pOVLANHDR) {
+        ethhdr->ether_type = htons(realtime_info->vlanproto[0]);
+        pOVLANHDR->priority_cfi_and_id = htons(realtime_info->ovlanid);
+        pOVLANHDR->next_type = htons(ETH_P_IP);
+        length += sizeof(ethernet_vlan_header_next_tv_t);
+        l3_offset += sizeof(ethernet_vlan_header_next_tv_t);
+        if (pIVLANHDR) {
+            pOVLANHDR->next_type = htons(realtime_info->vlanproto[1]);
+            pIVLANHDR->priority_cfi_and_id = htons(realtime_info->ivlanid);
+            pIVLANHDR->next_type = htons(ETH_P_IP);
+            length += sizeof(ethernet_vlan_header_next_tv_t);
+            l3_offset += sizeof(ethernet_vlan_header_next_tv_t);
+        }
+    }
+
+    //封装IPC Header
+    ephdr->path.field = UIPC_FIELD_DHCP_SERVER;
+    ephdr->path.act = UIPC_ACT_WORK_MSG;
+    ephdr->sw_rx_dbid = dhcpd_server->nLineID;
+    ephdr->sw_ser_dbid = dhcpd_server->nLineID;
+    ephdr->l3_offset = l3_offset;
+    ephdr->data_len = length;
+    length += sizeof(dhcp_external_proc_hdr_t);
+    ipctaskhdr->byte_len = length;
+    length += sizeof(uipc_task_t);
+#endif
 
     struct sockaddr_in sin={0};
     sin.sin_family = AF_INET;
     sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
     sin.sin_addr.s_addr = 0x100007f;
     packet_save_log(packet_process, (struct dhcpv4_message *)request->relay_payload, request->v4.msgcode, "发送报文[v4中继][C]");
-    return sendto(packet_process->vdm->sockfd_main, buffer, sizeof(ipcshare_hdr_t) + length, 0, (struct sockaddr*)&sin, sizeof(sin));
+    return sendto(packet_process->vdm->sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin));
 }

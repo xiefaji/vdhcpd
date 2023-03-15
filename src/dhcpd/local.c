@@ -38,6 +38,7 @@ PUBLIC int local_main_clean(void *p, trash_queue_t *pRecycleTrash)
     return 0;
 }
 
+PRIVATE int packet_do_dpi(packet_process_t *packet_process);
 PRIVATE int packet_parse(packet_process_t *packet_process);
 PRIVATE int packet_match_server(packet_process_t *packet_process);
 PRIVATE int packet_process4(packet_process_t *packet_process, trash_queue_t *pRecycleTrash);
@@ -59,11 +60,12 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
         packet_process_t packet_process;
         BZERO(&packet_process, sizeof(packet_process_t));
         struct mmsghdr *packets = &receive_bucket->receives.packets[idx];
-        const ipcshare_hdr_t *ipcsharehdr = packet_process.ipcsharehdr = packets->msg_hdr.msg_iov->iov_base;
+        packet_process.data = packets->msg_hdr.msg_iov->iov_base;
         packet_process.data_len = packets->msg_len;
         packet_process.vdm = vdm;
 
-        packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.ipcsharehdr->lineid);
+        packet_do_dpi(&packet_process);
+        packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.dpi.lineid);
         if (!packet_process.dhcpd_server)
             continue;//DHCP服务查找失败
 
@@ -76,7 +78,7 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
             continue;
 
         //报文处理
-        switch (ipcsharehdr->process) {
+        switch (packet_process.dpi.process) {
         case DEFAULT_DHCPv4_PROCESS:
             packet_process4(&packet_process, pRecycleTrash);
             break;
@@ -88,20 +90,102 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
     return 0;
 }
 
+PRIVATE int packet_do_dpi(packet_process_t *packet_process)
+{
+    dhcp_packet_t *request = &packet_process->request;
+#ifndef VERSION_VNAAS
+    ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)packet_process->data;
+    packet_process->dpi.process = ipcsharehdr->process;
+    packet_process->dpi.driveid = ipcsharehdr->driveid;
+    packet_process->dpi.lineid = ipcsharehdr->lineid;
+    packet_process->dpi.sessionid = ipcsharehdr->session;
+    packet_process->dpi.vlanid[0] = ipcsharehdr->outer_vlanid;
+    packet_process->dpi.vlanid[1] = ipcsharehdr->inner_vlanid;
+    packet_process->dpi.vlanproto[0] = 0;
+    packet_process->dpi.vlanproto[1] = 0;
+    packet_process->dpi.l3 = (unsigned char *)&ipcsharehdr->pdata[0];
+    packet_process->dpi.l3len = ipcsharehdr->datalen;
+    request->ethhdr = &ipcsharehdr->ethhdr;
+#else
+    uipc_task_t *ipctaskhdr = (uipc_task_t *)packet_process->data;
+    dhcp_external_proc_hdr_t *ephdr = (dhcp_external_proc_hdr_t *)ipctaskhdr->byte;
+
+    u32 process = 0;
+    u16 vlanproto[2] = {0, 0};
+    u16 vlanid[2] = {0, 0};
+    u32 offset = 0;
+
+    //原始报文解析[Layer2]
+    unsigned int vlan_packet = 0;
+    struct ether_header *ethhdr = (struct ether_header *)ephdr->data;
+    const unsigned char *packet = (const unsigned char *)ethhdr;
+    u16 protocoltype = ntohs(ethhdr->ether_type);
+    offset += sizeof(struct ether_header);
+    while ((ETH_P_IP!=protocoltype && ETH_P_IPV6!=protocoltype) && offset <= 64/*mbuf0->l3doff*/) {
+        //报文解析[Layer2]
+        switch (protocoltype) {
+        case ETH_P_8021Q:
+        case ETH_P_QINQ1:
+        case ETH_P_QINQ2:
+        case ETH_P_QINQ3:
+            if (vlan_packet > 1)
+                return -1;
+            vlanproto[vlan_packet] = protocoltype;
+            vlanid[vlan_packet] = ((packet[offset] << 8) + packet[offset+1]) & 0xFFF;
+            protocoltype = (packet[offset+2] << 8) + packet[offset+3];
+            offset += 4;
+            vlan_packet++;
+            break;
+        case ETH_P_MPLS_UC:
+        case ETH_P_MPLS_MC:
+            unsigned int label = ntohl(*((unsigned int*)&packet[offset]));
+            protocoltype = ETH_P_IP, offset += 4;
+            while ((label & 0x100) != 0x100 && offset<=128) {
+                offset += 4;
+                label = ntohl(*((unsigned int*)&packet[offset]));
+            }
+            break;
+        case ETH_P_ARP:
+        case ETH_P_PPP_DISC:
+        case ETH_P_PPP_SES:
+        default:
+            return -2;
+            break;
+        }
+
+        //设定DHCP类型[V4/V6]
+        if (ETH_P_IP == protocoltype) process = DEFAULT_DHCPv4_PROCESS;
+        else if (ETH_P_IPV6 == protocoltype) process =DEFAULT_DHCPv6_PROCESS;
+    }
+
+    packet_process->dpi.process = process;
+    packet_process->dpi.driveid = 0;
+    packet_process->dpi.lineid = ephdr->sw_rx_dbid;
+    packet_process->dpi.sessionid = 0;
+    packet_process->dpi.vlanid[0] = vlanid[0];
+    packet_process->dpi.vlanid[1] = vlanid[1];
+    packet_process->dpi.vlanproto[0] = vlanproto[0];
+    packet_process->dpi.vlanproto[1] = vlanproto[1];
+    packet_process->dpi.l3 = (unsigned char *)&ephdr->data[offset];
+    packet_process->dpi.l3len = ephdr->data_len - offset;
+    request->ethhdr = ethhdr;
+#endif
+    return 0;
+}
+
 //报文基础解析
 PRIVATE int packet_parse(packet_process_t *packet_process)
 {
     int retcode = 0;
-    ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcp_packet_t *request = &packet_process->request;
-    request->ethhdr = &ipcsharehdr->ethhdr;
 
-    switch (ipcsharehdr->process) {
+    unsigned char *l3 = packet_process->dpi.l3;
+    const u16 l3len = packet_process->dpi.l3len;
+    switch (packet_process->dpi.process) {
     case DEFAULT_DHCPv4_PROCESS: {
-        const u16 l3len = ipcsharehdr->datalen;
-        struct iphdr *iphdr = request->iphdr = (struct iphdr *)ipcsharehdr->pdata;
+        struct iphdr *iphdr = request->iphdr = (struct iphdr *)l3;
         const u16 iphdr_len = iphdr->ihl * 4;
-        struct udphdr *udphdr = request->udphdr = (struct udphdr *)(ipcsharehdr->pdata + iphdr_len);
+        struct udphdr *udphdr = request->udphdr = (struct udphdr *)(l3 + iphdr_len);
         const u16 l4len = l3len - iphdr_len;
 
         request->l3len = ntohs(iphdr->tot_len);
@@ -116,10 +200,9 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
         }
     } break;
     case DEFAULT_DHCPv6_PROCESS: {
-        const u16 l3len = ipcsharehdr->datalen;
-        struct ip6_hdr *ip6hdr = request->ip6hdr = (struct ip6_hdr *)ipcsharehdr->pdata;
+        struct ip6_hdr *ip6hdr = request->ip6hdr = (struct ip6_hdr *)l3;
         const u16 iphdr_len = sizeof(struct ip6_hdr);
-        struct udphdr *udphdr = request->udphdr = (struct udphdr *)(ipcsharehdr->pdata + iphdr_len);
+        struct udphdr *udphdr = request->udphdr = (struct udphdr *)(l3 + iphdr_len);
         const u16 l4len = l3len - iphdr_len;
 
         request->l3len = ntohs(ip6hdr->ip6_plen) + iphdr_len;
@@ -135,7 +218,7 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
     } break;
     default:
         retcode = -1;
-        x_log_warn("%s:%d 未识别Processl数据类型[%u][%u].", __FUNCTION__, __LINE__, ipcsharehdr->process, errno);
+        x_log_warn("%s:%d 未识别Processl数据类型[%u][%u].", __FUNCTION__, __LINE__, packet_process->dpi.process, errno);
         break;
     }
     return retcode;
@@ -144,7 +227,6 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
 //DHCP服务参数匹配
 PRIVATE int packet_match_server(packet_process_t *packet_process)
 {
-    ipcshare_hdr_t *ipcsharehdr = packet_process->ipcsharehdr;
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
 
     if (!dhcpd_server->nEnabled)
@@ -153,13 +235,15 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
     if (!ENABLE_DHCP_IPV4(dhcpd_server) && !ENABLE_DHCP_IPV6(dhcpd_server))
         return -1;//IPV4/IPV6模式均停用
 
-    if (dhcpd_server->iface.driveid != ipcsharehdr->driveid)
+#ifndef VERSION_VNAAS
+    if (dhcpd_server->iface.driveid != packet_process->dpi.driveid)
         return -1;//监听物理网卡不匹配
+#endif
 
-    if (!BITMASK_ISSET(dhcpd_server->pVLAN, ipcsharehdr->outer_vlanid))
+    if (!BITMASK_ISSET(dhcpd_server->pVLAN, packet_process->dpi.vlanid[0]))
         return - 1;//监听外VLAN不匹配
 
-    if (!BITMASK_ISSET(dhcpd_server->pQINQ, ipcsharehdr->inner_vlanid))
+    if (!BITMASK_ISSET(dhcpd_server->pQINQ, packet_process->dpi.vlanid[1]))
         return - 1;//监听内VLAN不匹配
 
     return 0;

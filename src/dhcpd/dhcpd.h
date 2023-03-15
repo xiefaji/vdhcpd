@@ -90,10 +90,18 @@ typedef struct {
     dhcpd_server_t *dhcpd_server;//DHCP服务
     realtime_info_t *realtime_info;
 
-    union {
-        unsigned char *data;
-        ipcshare_hdr_t *ipcsharehdr;
-    };
+    struct {
+        u32 process;//IPV4/IPV6
+        u32 driveid;//物理网卡ID
+        u32 lineid;//线路ID
+        u16 vlanproto[2];// hostbit
+        u16 vlanid[2];//VLAN/QINQ hostbit
+        u16 sessionid;
+        unsigned char *l3;
+        u16 l3len;
+    } dpi;
+
+    unsigned char *data;
     u32 data_len;
     dhcp_packet_t request, reply;//请求报文/响应报文
     mac_address_t macaddr;//客户端MAC地址
