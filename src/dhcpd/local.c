@@ -240,11 +240,8 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
         return -1;//监听物理网卡不匹配
 #endif
 
-    if (!BITMASK_ISSET(dhcpd_server->pVLAN, packet_process->dpi.vlanid[0]))
-        return - 1;//监听外VLAN不匹配
-
-    if (!BITMASK_ISSET(dhcpd_server->pQINQ, packet_process->dpi.vlanid[1]))
-        return - 1;//监听内VLAN不匹配
+    if (!xEXACTVLAN_Match(dhcpd_server->pEXACTVLAN, packet_process->dpi.vlanid[0], packet_process->dpi.vlanid[1]))
+        return -1;//监听VLAN/QINQ不匹配
 
     return 0;
 }

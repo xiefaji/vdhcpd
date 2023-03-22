@@ -20,8 +20,7 @@ PUBLIC void dhcpd_server_release(void *p)
 {
     dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)p;
     if (dhcpd_server) {
-        xfree(dhcpd_server->pVLAN);
-        xfree(dhcpd_server->pQINQ);
+        xEXACTVLAN_Free(dhcpd_server->pEXACTVLAN);
         dhcpd_lease_main_release(dhcpd_server->staticlease_main);
         key_tree_destroy2(&dhcpd_server->key_serverid, NULL);
         xfree(dhcpd_server);
@@ -32,8 +31,7 @@ PUBLIC void dhcpd_server_recycle(void *p, trash_queue_t *pRecycleTrash)
 {
     dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)p;
     if (dhcpd_server) {
-        trash_queue_enqueue(pRecycleTrash, dhcpd_server->pVLAN);
-        trash_queue_enqueue(pRecycleTrash, dhcpd_server->pQINQ);
+        xEXACTVLAN_Recycle(dhcpd_server->pEXACTVLAN, pRecycleTrash);
         dhcpd_lease_main_recycle(dhcpd_server->staticlease_main, pRecycleTrash);
         key_tree_nodes_recycle(&dhcpd_server->key_serverid, pRecycleTrash, NULL);
         trash_queue_enqueue(pRecycleTrash, dhcpd_server);
@@ -56,8 +54,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
         u16 val16;
         u32 val32;
-        char VLAN[MAXNAMELEN+1]={0},QINQ[MAXNAMELEN+1]={0};
-        char tmpbuffer[MAXNAMELEN+1]={0};
+        char tmpbuffer[MAXNAMELEN+1]={0},exactvlan[MAXNAMELEN+1]={0};
 
         dhcpd_server_t *dhcpd_server = dhcpd_server_init();
         dhcpd_server->cfg_main = cfg_main;
@@ -67,20 +64,16 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_U32(&Query, "id", &dhcpd_server->nID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_server->nLineID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "enable", &dhcpd_server->nEnabled);
-        CSqlRecorDset_GetFieldValue_String(&Query, "outervlan", VLAN, MAXNAMELEN);
-        CSqlRecorDset_GetFieldValue_String(&Query, "innervlan", QINQ, MAXNAMELEN);
-        dhcpd_server->pVLAN = GetVLAN_BITMASK(VLAN, strlen(VLAN), 0);
-        dhcpd_server->pQINQ = GetVLAN_BITMASK(QINQ, strlen(QINQ), 0);
+        CSqlRecorDset_GetFieldValue_String(&Query, "exactvlan", exactvlan, MAXNAMELEN);
+        dhcpd_server->pEXACTVLAN = xEXACTVLAN_init(exactvlan, 1);
         CSqlRecorDset_GetFieldValue_U32(&Query, "stack", &dhcpd_server->mode);
         CSqlRecorDset_GetFieldValue_U32(&Query, "leasetime", &dhcpd_server->leasetime);
 #else
         CSqlRecorDset_GetFieldValue_U32(&Query, "nID", &dhcpd_server->nID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nSwID", &dhcpd_server->nLineID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nEnable", &dhcpd_server->nEnabled);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szOutVlan", VLAN, MAXNAMELEN);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szInVlan", QINQ, MAXNAMELEN);
-        dhcpd_server->pVLAN = GetVLAN_BITMASK(VLAN, strlen(VLAN), 0);
-        dhcpd_server->pQINQ = GetVLAN_BITMASK(QINQ, strlen(QINQ), 0);
+        CSqlRecorDset_GetFieldValue_String(&Query, "exactvlan", exactvlan, MAXNAMELEN);
+        dhcpd_server->pEXACTVLAN = xEXACTVLAN_init(exactvlan, 1);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nStack", &dhcpd_server->mode);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nLeaseTime", &dhcpd_server->leasetime);
 #endif

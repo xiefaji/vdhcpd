@@ -11,7 +11,7 @@ DESTDIR = ./bin
 
 DEFINES += _GNU_SOURCE
 #开启宏表示新架构
-DEFINES += VERSION_VNAAS
+#DEFINES += VERSION_VNAAS
 
 INCLUDEPATH += src
 LIBS += -lpthread -ldl -lz
@@ -26,6 +26,7 @@ HEADERS += \
     src/share/array/queue.h \
     src/share/array/trashqueue.h \
     src/share/bitmap/bitmap.h \
+    src/share/bitmap/bitmap_exactvlan.h \
     src/share/bitmap/bitmap_vlan.h \
     src/share/cjson/cjson.h \
     src/share/inifile/inifile.h \

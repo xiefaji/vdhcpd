@@ -3,6 +3,7 @@
 
 #include "share/defines.h"
 #include "share/types.h"
+#include "share/bitmap/bitmap_exactvlan.h"
 #include "share/bitmap/bitmap_vlan.h"
 #include "share/array/trashqueue.h"
 #include "acl.h"
@@ -23,8 +24,7 @@ typedef struct {
     u32 nEnabled;
     u32 leasetime;//租约时长 单位：秒
     dhcpd_mode_t mode;
-    xVLANBITMAP *pVLAN;
-    xVLANBITMAP *pQINQ;
+    PEXACTVLAN pEXACTVLAN;//精确VLAN匹配
 
     //线路配置信息
     struct {
