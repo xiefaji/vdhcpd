@@ -137,14 +137,14 @@ PRIVATE int packet_do_dpi(packet_process_t *packet_process)
             vlan_packet++;
             break;
         case ETH_P_MPLS_UC:
-        case ETH_P_MPLS_MC:
+        case ETH_P_MPLS_MC:{
             unsigned int label = ntohl(*((unsigned int*)&packet[offset]));
             protocoltype = ETH_P_IP, offset += 4;
             while ((label & 0x100) != 0x100 && offset<=128) {
                 offset += 4;
                 label = ntohl(*((unsigned int*)&packet[offset]));
             }
-            break;
+        } break;
         case ETH_P_ARP:
         case ETH_P_PPP_DISC:
         case ETH_P_PPP_SES:
@@ -155,7 +155,7 @@ PRIVATE int packet_do_dpi(packet_process_t *packet_process)
 
         //设定DHCP类型[V4/V6]
         if (ETH_P_IP == protocoltype) process = DEFAULT_DHCPv4_PROCESS;
-        else if (ETH_P_IPV6 == protocoltype) process =DEFAULT_DHCPv6_PROCESS;
+        else if (ETH_P_IPV6 == protocoltype) process = DEFAULT_DHCPv6_PROCESS;
     }
 
     packet_process->dpi.process = process;
@@ -352,7 +352,7 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
     dhcp_packet_t *request = &packet_process->request;
     struct dhcpv6_client_header *req = request->payload;
 
-    if (request->payload_len < sizeof(struct dhcpv6_client_header))
+    if (request->payload_len < offsetof(struct dhcpv6_client_header, options))
         return -1;
 
     char hostname[MAXNAMELEN+1]={0},reqopts[MAXNAMELEN+1]={0},clientidentifier[MAXNAMELEN+1]={0};
@@ -440,7 +440,7 @@ PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRe
     if (ENABLE_IPV6_RELAY(dhcpd_server)) {//中继模式
         relay6_send_request_packet(packet_process);
     } else if (ENABLE_IPV6_SERVER(dhcpd_server)) {//服务器模式
-
+        server6_process(packet_process);//wuao
     }
     return 0;
 }

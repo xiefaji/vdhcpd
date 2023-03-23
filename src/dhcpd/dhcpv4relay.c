@@ -144,7 +144,7 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     agent_information->linkselection = dhcpd_server->dhcprelay.v4.subnet;
     dhcpv4_put(relay, &cookie, DHCPV4_OPT_AGENT_INFORMATION, sizeof(struct agent_infomation_t), agent_information);//中继标识
     dhcpv4_put(relay, &cookie, DHCPV4_OPT_END, 0, NULL);
-    length += PACKET_SIZE(relay, cookie);
+    length += PACKET4_SIZE(relay, cookie);
 
     //封装UDP Header
     length += sizeof(struct udphdr);

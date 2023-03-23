@@ -120,14 +120,18 @@ PUBLIC_DATA int webaction_init(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int webaction_start(void *p, trash_queue_t *pRecycleTrash);
 
 //dhcpv4.c
-#define PACKET_SIZE(start, end) (((u8 *)end - (u8 *)start) < DHCPV4_MIN_PACKET_SIZE ? \
+#define PACKET4_SIZE(start, end) (((u8 *)end - (u8 *)start) < DHCPV4_MIN_PACKET_SIZE ? \
     DHCPV4_MIN_PACKET_SIZE : (u8 *)end - (u8 *)start)
 PUBLIC_DATA char *dhcpv4_msg_to_string(u8 reqmsg);
 PUBLIC_DATA void dhcpv4_put(struct dhcpv4_message *msg, u8 **cookie, u8 type, u8 len, const void *data);
 PUBLIC_DATA int server4_process(packet_process_t *packet_process);
 
 //dhcpv6.c
+#define PACKET6_SIZE(start, end) (((u8 *)end - (u8 *)start) < DHCPV6_MIN_PACKET_SIZE ? \
+    DHCPV6_MIN_PACKET_SIZE : (u8 *)end - (u8 *)start)
 PUBLIC_DATA char *dhcpv6_msg_to_string(u8 reqmsg);
+PUBLIC_DATA void dhcpv6_put(struct dhcpv6_client_header *msg, u8 **cookie, u16 type, u16 len, const void *data);
+PUBLIC_DATA int server6_process(packet_process_t *packet_process);
 
 //dhcpv4relay.c
 struct agent_infomation_t {

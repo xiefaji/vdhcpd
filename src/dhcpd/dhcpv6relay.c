@@ -84,7 +84,7 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
         switch (otype) {
         case DHCPV6_OPT_RELAY_MSG: {
             struct dhcpv6_client_header *relay_msg = (struct dhcpv6_client_header *)odata;
-            u8 *reply_start = odata + sizeof(struct dhcpv6_client_header);
+            u8 *reply_start = odata + offsetof(struct dhcpv6_client_header, options);
             u8 *reply_end = odata + olen;
             u16 reply_otype, reply_olen;
             u8 *reply_odata;

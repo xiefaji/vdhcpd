@@ -36,7 +36,7 @@ PUBLIC void dhcpv4_put(struct dhcpv4_message *msg, u8 **cookie, u8 type, u8 len,
         return;
 
     *c++ = len;
-    memcpy(c, data, len);
+    BCOPY(data, c, len);
 }
 
 PRIVATE void dhcpv4_free_assignment(struct vdhcpd_assignment *a)
@@ -80,9 +80,10 @@ PRIVATE struct vdhcpd_assignment *find_assignment_by_macaddr(packet_process_t *p
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcpd_server_stats_t *server_stats = dhcpd_server->server_stats;
     struct vdhcpd_assignment *a;
-    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head)
-            if (!BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t)))
+    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head) {
+        if (!BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t)))
             return a;
+    }
     return NULL;
 }
 
@@ -92,9 +93,10 @@ PRIVATE struct vdhcpd_assignment *find_assignment_by_ipaddr(packet_process_t *pa
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcpd_server_stats_t *server_stats = dhcpd_server->server_stats;
     struct vdhcpd_assignment *a;
-    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head)
-            if (!BCMP(&a->addr, &ipaddr, sizeof(ip4_address_t)))
+    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head) {
+        if (!BCMP(&a->addr, &ipaddr, sizeof(ip4_address_t)))
             return a;
+    }
     return NULL;
 }
 
@@ -397,7 +399,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
     }
 
     reply->payload = &rep;
-    reply->payload_len = PACKET_SIZE(&rep, cookie);
+    reply->payload_len = PACKET4_SIZE(&rep, cookie);
     return server4_send_reply_packet(packet_process, reply, dest);
 }
 

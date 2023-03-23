@@ -23,23 +23,24 @@ typedef struct {
     void *relay_payload;//中继响应负载[V4/V6][响应给客户端内容]
     u16 l3len,l4len,payload_len,relay_payload_len;
 
-    struct {
-        enum dhcpv4_msg msgcode;
-        ip4_address_t reqaddr;//客户端请求的固定IP地址
-        ip4_address_t badipaddr;//被占用地址 netbit
-        u32 leasetime;//客户端请求的租约时长
-        bool accept_fr_nonce;
-        bool incl_fr_opt;
-        ip4_address_t fr_serverid;
-    } v4;
-    struct {
-        u16 msgcode;
-        struct interface_id_t interfaceid;
-        ip6_address_t reqaddr;//客户端请求的固定IP地址
-        ip6_address_t ipaddr;//分配给客户端的IP地址
-        u32 leasetime;//客户端请求的租约时长
-    } v6;
-
+    union {
+        struct {
+            enum dhcpv4_msg msgcode;
+            ip4_address_t reqaddr;//客户端请求的固定IP地址
+            ip4_address_t badipaddr;//被占用地址 netbit
+            u32 leasetime;//客户端请求的租约时长
+            bool accept_fr_nonce;
+            bool incl_fr_opt;
+            ip4_address_t fr_serverid;
+        } v4;
+        struct {
+            enum dhcpv6_msg msgcode;
+            struct interface_id_t interfaceid;
+            ip6_address_t reqaddr;//客户端请求的固定IP地址
+            ip6_address_t ipaddr;//分配给客户端的IP地址
+            u32 leasetime;//客户端请求的租约时长
+        } v6;
+    };
 } dhcp_packet_t;
 
 #endif
