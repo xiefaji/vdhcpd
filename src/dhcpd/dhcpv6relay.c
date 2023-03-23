@@ -305,19 +305,19 @@ PUBLIC int relay6_send_reply_packet(packet_process_t *packet_process)
     u16 l3_offset = 0;
     BCOPY(realtime_info->key.u.macaddr.addr, ethhdr->ether_dhost, ETH_ALEN);
     BCOPY(dhcpd_server->iface.macaddr.addr, ethhdr->ether_shost, ETH_ALEN);
-    ethhdr->ether_type = htons(ETH_P_IP);
+    ethhdr->ether_type = htons(ETH_P_IPV6);
     length += sizeof(struct ether_header);
     l3_offset += sizeof(struct ether_header);
     if (pOVLANHDR) {
         ethhdr->ether_type = htons(realtime_info->vlanproto[0]);
         pOVLANHDR->priority_cfi_and_id = htons(realtime_info->ovlanid);
-        pOVLANHDR->next_type = htons(ETH_P_IP);
+        pOVLANHDR->next_type = htons(ETH_P_IPV6);
         length += sizeof(ethernet_vlan_header_next_tv_t);
         l3_offset += sizeof(ethernet_vlan_header_next_tv_t);
         if (pIVLANHDR) {
             pOVLANHDR->next_type = htons(realtime_info->vlanproto[1]);
             pIVLANHDR->priority_cfi_and_id = htons(realtime_info->ivlanid);
-            pIVLANHDR->next_type = htons(ETH_P_IP);
+            pIVLANHDR->next_type = htons(ETH_P_IPV6);
             length += sizeof(ethernet_vlan_header_next_tv_t);
             l3_offset += sizeof(ethernet_vlan_header_next_tv_t);
         }
