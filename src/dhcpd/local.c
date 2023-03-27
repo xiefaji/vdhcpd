@@ -152,11 +152,10 @@ PRIVATE int packet_do_dpi(packet_process_t *packet_process)
             return -2;
             break;
         }
-
-        //设定DHCP类型[V4/V6]
-        if (ETH_P_IP == protocoltype) process = DEFAULT_DHCPv4_PROCESS;
-        else if (ETH_P_IPV6 == protocoltype) process = DEFAULT_DHCPv6_PROCESS;
     }
+    //设定DHCP类型[V4/V6]
+    if (ETH_P_IP == protocoltype) process = DEFAULT_DHCPv4_PROCESS;
+    else if (ETH_P_IPV6 == protocoltype) process = DEFAULT_DHCPv6_PROCESS;
 
     packet_process->dpi.process = process;
     packet_process->dpi.driveid = 0;
