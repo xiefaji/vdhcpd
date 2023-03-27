@@ -226,6 +226,18 @@ PUBLIC realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash)
     return realtime_info;
 }
 
+//租约释放[db]
+PUBLIC void realtime_info_release_lease(realtime_info_t *realtime_info, const int ipv4)
+{
+    if (ipv4) {
+        realtime_info->v4.leasetime = 0;
+        __sync_fetch_and_add(&realtime_info->update_db4, 1);
+    } else {
+        realtime_info->v6.leasetime = 0;
+        __sync_fetch_and_add(&realtime_info->update_db6, 1);
+    }
+}
+
 PRIVATE void realtime_info_warning(realtime_info_t *realtime_info, const char *describe)
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
@@ -267,9 +279,9 @@ PRIVATE void realtime_info_update_lease4(realtime_info_t *realtime_info)
                                           "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
                                           "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
                        IPV4BYTES(realtime_info->v4.ipaddr), MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
-                       0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info),
+                       RLTINFO_IS_STATIC4(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info),
                        MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
-                       0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info));
+                       RLTINFO_IS_STATIC4(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info));
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }
@@ -286,9 +298,9 @@ PRIVATE void realtime_info_update_lease6(realtime_info_t *realtime_info)
                                           "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
                                           "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
                        ipaddr, MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v6.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME6(realtime_info),
-                       0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info),
+                       RLTINFO_IS_STATIC6(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info),
                        MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v6.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME6(realtime_info),
-                       0/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info));
+                       RLTINFO_IS_STATIC6(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info));
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }

@@ -138,5 +138,6 @@ PUBLIC_DATA void server_stats_main_init();
 PUBLIC_DATA void server_stats_main_release();
 PUBLIC_DATA void server_stats_main_maintain();
 PUBLIC_DATA dhcpd_server_stats_t *server_stats_find(const u32 serverid);
+PUBLIC_DATA void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const mac_address_t macaddr, const int ipv4);
 
 #endif

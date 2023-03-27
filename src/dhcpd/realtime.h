@@ -72,6 +72,7 @@ PUBLIC_DATA realtime_info_t *realtime_search(void *p);
 PUBLIC_DATA realtime_info_t *realtime_search_macaddr(const mac_address_t macaddr);
 PUBLIC_DATA realtime_info_t *realtime_search_duid(const u8 *clientidentifier, const u32 len);
 PUBLIC_DATA realtime_info_t *realtime_find(void *p, trash_queue_t *pRecycleTrash);
+PUBLIC_DATA void realtime_info_release_lease(realtime_info_t *realtime_info, const int ipv4);
 PUBLIC_DATA size_t realtime_info_finger(realtime_info_t *realtime_info, char *finger, const size_t size);
 PUBLIC_DATA size_t realtime_info_finger_md5(realtime_info_t *realtime_info, char *finger_md5, const size_t size);
 

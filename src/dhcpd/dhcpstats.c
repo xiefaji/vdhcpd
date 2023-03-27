@@ -110,3 +110,16 @@ PUBLIC dhcpd_server_stats_t *server_stats_find(const u32 serverid)
         return knode ? knode->data:server_stats;
     }
 }
+
+//租约释放
+PUBLIC void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const mac_address_t macaddr, const int ipv4)
+{
+    time_t now = vdhcpd_time();
+    struct list_head *lists = ipv4 ? &server_stats->dhcpv4_assignments : &server_stats->dhcpv6_assignments;
+
+    struct vdhcpd_assignment *a, *n;
+    list_for_each_entry_safe(a, n, lists, head) {
+        if (BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t)))
+            a->valid_until = now;
+    }
+}
