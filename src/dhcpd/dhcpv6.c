@@ -107,7 +107,7 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     realtime_info_t *realtime_info = packet_process->realtime_info;
     struct dhcpv6_client_header *rep = packet->payload;
 
-    char buffer[MAXBUFFERLEN+1]={0};
+    unsigned char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
 #ifndef VERSION_VNAAS
     ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
@@ -211,10 +211,6 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     length += sizeof(uipc_task_t);
 #endif
 
-    struct sockaddr_in sin={0};
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
-    sin.sin_addr.s_addr = 0x100007f;
     packet_save_log6(packet_process, (struct dhcpv6_client_header *)packet->payload, packet->v6.msgcode, "发送报文[v6服务][C]");
-    return sendto(packet_process->vdm->sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin));
+    ipc_send_data(packet_process, buffer, length);
 }

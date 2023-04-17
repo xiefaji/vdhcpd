@@ -4,16 +4,21 @@
 #include <net/ethernet.h>
 #include "share/types.h"
 
-#define DEFAULT_CORE_UDP_PORT 6668/*主程序*/
-#define DEFAULT_DHCP_UDP_PORT 6667/*DHCPD*/
-#define DEFAULT_API_UDP_PORT 12000
-#define DEFAULT_WEBACTION_UDP_PORT 20000
-
 #define DEFAULT_DHCPv4_PROCESS  2101
 #define DEFAULT_DHCPv6_PROCESS  2102
+#define DEFAULT_API_UDP_PORT 12000
 
+#ifndef VERSION_VNAAS
+#define DEFAULT_CORE_UDP_PORT 6668/*主程序*/
+#define DEFAULT_DHCP_UDP_PORT 6667/*DHCPD*/
+#define DEFAULT_WEBACTION_UDP_PORT 20000
 #define CODE_REQUEST    0
 #define CODE_REPLY  1
+#else
+#define VNAAS_POP_IPC_DGRAM_SOCK "/run/vnaas_pop_ipc.socket"
+#define VNAAS_DHCP_IPC_DGRAM_SOCK "/run/vnaas_dhcp_ipc.socket"
+#define VNAAS_DHCP_API_DGRAM_SOCK "/run/vnaas_dhcp_api.socket"
+#endif
 
 #ifndef VERSION_VNAAS
 typedef struct {

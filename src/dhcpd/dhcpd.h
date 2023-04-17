@@ -106,6 +106,7 @@ typedef struct {
     dhcp_packet_t request, reply;//请求报文/响应报文
     mac_address_t macaddr;//客户端MAC地址
 } packet_process_t;
+PUBLIC_DATA int ipc_send_data(packet_process_t *packet_process, const unsigned char *buffer, const size_t length);
 
 //local.c
 PUBLIC_DATA int local_main_init(void *p, trash_queue_t *pRecycleTrash);

@@ -162,7 +162,7 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
     realtime_info_t *realtime_info = packet_process->realtime_info;
     dhcp_packet_t *request = &packet_process->request;
 
-    char buffer[MAXBUFFERLEN+1]={0};
+    unsigned char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0, opts_offset = 0;;
     struct ip6_hdr *pIP6Header = (struct ip6_hdr *)&buffer[offset];
     offset += sizeof(struct ip6_hdr);
@@ -233,7 +233,7 @@ PUBLIC int relay6_send_reply_packet(packet_process_t *packet_process)
     struct dhcpv6_relay_header *rep = request->payload;
     struct dhcpv6_client_header *relay_msg = request->relay_payload;
 
-    char buffer[MAXBUFFERLEN+1]={0};
+    unsigned char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
 #ifndef VERSION_VNAAS
     ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
@@ -335,10 +335,6 @@ PUBLIC int relay6_send_reply_packet(packet_process_t *packet_process)
     length += sizeof(uipc_task_t);
 #endif
 
-    struct sockaddr_in sin={0};
-    sin.sin_family = AF_INET;
-    sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
-    sin.sin_addr.s_addr = 0x100007f;
     packet_save_log6(packet_process, (struct dhcpv6_client_header *)request->relay_payload, request->v6.msgcode, "发送报文[v6中继][C]");
-    return sendto(packet_process->vdm->sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin));
+    ipc_send_data(packet_process, buffer, length);
 }

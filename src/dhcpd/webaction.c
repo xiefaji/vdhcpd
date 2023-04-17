@@ -1,3 +1,4 @@
+#include <sys/un.h>
 #include "dhcpd.h"
 
 //filed
@@ -22,7 +23,11 @@ PUBLIC int webaction_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
+#ifndef VERSION_VNAAS
     vdm->sockfd_webaction = create_udp_socket(DEFAULT_WEBACTION_UDP_PORT, 1, 3, 0, NULL);
+#else
+    vdm->sockfd_webaction = create_unix_socket(VNAAS_DHCP_API_DGRAM_SOCK, 1, 3);
+#endif
     if (vdm->sockfd_webaction < 0) {
         x_log_warn("%s:%d 创建SOCKET失败[MAIN].", __FUNCTION__, __LINE__);
         exit(0);
@@ -31,15 +36,23 @@ PUBLIC int webaction_init(void *p, trash_queue_t *pRecycleTrash)
     return 0;
 }
 
-PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, struct sockaddr_in *fromto);
+#ifndef VERSION_VNAAS
+PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, struct sockaddr_in *fromto, socklen_t slen);
+#else
+PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, struct sockaddr_un *fromto, socklen_t slen);
+#endif
 
 PUBLIC int webaction_start(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
     unsigned char buffer[MAXBUFFERLEN+1] = {0};
 
+#ifndef VERSION_VNAAS
      struct sockaddr_in sin;
-     socklen_t slen=sizeof(sin);
+#else
+     struct sockaddr_un sin;
+#endif
+     socklen_t slen = sizeof(sin);
      int retlen = recvfrom(vdm->sockfd_webaction, buffer, MINBUFFERLEN, 0, (struct sockaddr *)&sin, &slen);
      if (retlen <= 0) {
          int err = errno;
@@ -49,14 +62,18 @@ PUBLIC int webaction_start(void *p, trash_queue_t *pRecycleTrash)
      }
      buffer[retlen] = '\0';
 
-     return process_webaction_message(vdm->sockfd_webaction, buffer, &sin);
+     return process_webaction_message(vdm->sockfd_webaction, buffer, &sin, slen);
 }
 
-PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, struct sockaddr_in *fromto)
+#ifndef VERSION_VNAAS
+PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, struct sockaddr_in *fromto, socklen_t slen)
+#else
+PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, struct sockaddr_un *fromto, socklen_t slen)
+#endif
 {
     cJSON *pROOT = cJSON_Parse((const char *)buffer);
     if (!pROOT)
-        return -1;
+        return 0;
 
     cJSON *pField,*pAction;
     cJSON *pRetRoot = cJSON_CreateObject();
@@ -86,7 +103,7 @@ _return:
     char *reply_message = cJSON_PrintUnformatted(pRetRoot);
     cJSON_Delete(pRetRoot);
     if (BCMP(reply_message, "{\n}", strlen("{\n}")))
-        sendto(sockfd, reply_message, strlen(reply_message), 0, (struct sockaddr *)fromto, sizeof(struct sockaddr));
+        sendto(sockfd, reply_message, strlen(reply_message), 0, (struct sockaddr *)fromto, slen);
     xfree(reply_message);
     return 0;
 }

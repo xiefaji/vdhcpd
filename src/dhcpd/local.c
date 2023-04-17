@@ -6,7 +6,11 @@ PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
+#ifndef VERSION_VNAAS
     vdm->sockfd_main = create_udp_socket(DEFAULT_DHCP_UDP_PORT, 1, 1, 0, NULL);
+#else
+    vdm->sockfd_main = create_unix_socket(VNAAS_DHCP_IPC_DGRAM_SOCK, 1, 1);
+#endif
     if (vdm->sockfd_main < 0) {
         x_log_warn("%s:%d 创建SOCKET失败[MAIN].", __FUNCTION__, __LINE__);
         exit(0);

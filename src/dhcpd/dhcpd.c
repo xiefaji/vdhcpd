@@ -103,6 +103,10 @@ PUBLIC int vdhcpd_release()
     macaddr_filter_release(vdm->filter_tree);
     vdhcpd_urandom_release();
     MyDBOp_Destroy(&xHANDLE_Mysql);
+#ifdef VERSION_VNAAS
+    unlink(VNAAS_DHCP_IPC_DGRAM_SOCK);
+    unlink(VNAAS_DHCP_API_DGRAM_SOCK);
+#endif
     return 0;
 }
 
@@ -257,4 +261,23 @@ PRIVATE void vdhcpd_cfg_recycle(vdhcpd_cfg_t *cfg_main, trash_queue_t *pRecycleT
     key_tree_nodes_recycle(&cfg_main->key_servers, pRecycleTrash, dhcpd_server_recycle);
     key_tree_nodes_recycle(&cfg_main->key_macaddr_group, pRecycleTrash, macaddr_group_recycle);
     trash_queue_enqueue(pRecycleTrash, cfg_main);
+}
+
+PUBLIC int ipc_send_data(packet_process_t *packet_process, const unsigned char *buffer, const size_t length)
+{
+#ifndef VERSION_VNAAS
+    struct sockaddr_in sin;
+    BZERO(&sin, sizeof(struct sockaddr_in));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
+    sin.sin_addr.s_addr = 0x100007f;
+    return sendto(packet_process->vdm->sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin));
+#else
+#include <sys/un.h>
+    struct sockaddr_un sin;
+    BZERO(&sin, sizeof(struct sockaddr_un));
+    sin.sun_family = AF_UNIX;
+    strcpy(sin.sun_path, VNAAS_POP_IPC_DGRAM_SOCK);
+    return sendto(packet_process->vdm->sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin));
+#endif
 }

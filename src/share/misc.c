@@ -3,6 +3,7 @@
 #include <net/if.h>
 #include <time.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <sys/time.h>
 #include <sys/fcntl.h>
 #include <sys/stat.h>
@@ -241,43 +242,36 @@ PUBLIC int create_raw_socket6(int timeout, int reuseport, const char *ifname)
     return sock;
 }
 
-//PUBLIC int create_udp_socket2(const unsigned short listenport, int local, int timeout, int us_timeout,int reuseport, const char *ifname)
-//{
-//    int sock=socket(AF_INET,SOCK_DGRAM,0);
-//    if (sock < 0) {
-//        x_log_warn("%s : 创建socket失败[%s].", __FUNCTION__, strerror(errno));
-//        return -1;
-//    }
+PUBLIC int create_unix_socket(const char *filename, int timeout, int reuseport)
+{
+    struct sockaddr_un server;
+    int sock = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        x_log_warn("%s : 创建socket失败[%s].", __FUNCTION__, strerror(errno));
+        return -1;
+    }
 
-//    int one = 1;
-//    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
-//    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
+    int one = 1;
+    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
 
-//    if (reuseport) {
-//        one = 1;
-//        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
-//        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__,strerror(errno));
-//    }
+    if (reuseport) {
+        one = 1;
+        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
+        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__,strerror(errno));
+    }
 
-//    if (listenport) {
-//        struct sockaddr_in sin={0};
-//        sin.sin_family = AF_INET;
-//        sin.sin_addr.s_addr = local ? 0x100007f:htonl(INADDR_ANY);
-//        sin.sin_port = htons(listenport);
-//        if (-1 == bind(sock,(struct sockaddr *)&sin, sizeof(sin))) {
-//            close(sock);
-//            x_log_warn("%s : 设置绑定端口失败[%s]. port[%d]", __FUNCTION__, strerror(errno), listenport);
-//            return -1;
-//        }
-//    }
+    unlink(filename);
+    memset(&server, 0, sizeof(server));
+    server.sun_family = AF_UNIX;
+    strcpy(server.sun_path, filename); // This is created as a socker in the system filename space.
+    if (bind(sock, (struct sockaddr *)&server, SUN_LEN(&server)) < 0)
+        x_log_warn("%s : 设置绑定失败[%s]. filename[%s]", __FUNCTION__, strerror(errno), filename);
 
-//    //设置绑定接口
-//    if (ifname) socket_set_bind_interface(sock, ifname);
-
-//    //设置接收/发送超时
-//    socket_set_timeout2(sock, timeout, timeout, us_timeout);
-//    return sock;
-//}
+    //设置接收/发送超时
+    socket_set_timeout(sock, timeout, timeout);
+    return sock;
+}
 
 PRIVATE int code_convert(const char *from_charset,const char *to_charset,const char *inbuf,size_t inlen,char *outbuf,size_t outlen)
 {
