@@ -239,7 +239,7 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     pIPHeader->protocol = IPPROTO_UDP;
     pIPHeader->check = 0;
     pIPHeader->saddr = dhcpd_server->dhcpv4.gateway.address ? dhcpd_server->dhcpv4.gateway.address:dhcpd_server->iface.ipaddr.address;
-    pIPHeader->daddr = rep->yiaddr.address;
+    pIPHeader->daddr = DHCPV4_FLAGS_BROADCAST(rep) ? INADDR_BROADCAST:rep->yiaddr.address;
     WinDivertHelperCalcChecksums(pIPHeader, length, 0);//计算校验和
 
 #ifndef VERSION_VNAAS
