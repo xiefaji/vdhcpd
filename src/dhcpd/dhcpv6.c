@@ -212,5 +212,5 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
 #endif
 
     packet_save_log6(packet_process, (struct dhcpv6_client_header *)packet->payload, packet->v6.msgcode, "发送报文[v6服务][C]");
-    ipc_send_data(packet_process, buffer, length);
+    return ipc_send_data(packet_process, buffer, length);
 }

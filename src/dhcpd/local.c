@@ -16,18 +16,6 @@ PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
         exit(0);
     }
 
-    vdm->sockfd_raw4 = create_raw_socket(1, 1, NULL);
-    if (vdm->sockfd_raw4 < 0) {
-        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw 4].", __FUNCTION__, __LINE__);
-        exit(0);
-    }
-
-    vdm->sockfd_raw6 = create_raw_socket6(1, 1, NULL);
-    if (vdm->sockfd_raw6 < 0) {
-        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw 6].", __FUNCTION__, __LINE__);
-        exit(0);
-    }
-
     //申请数据包接收BUFFER
     receive_bucket = receive_bucket_allocate(1, MAXBUFFERLEN, 0);
     assert(receive_bucket);
@@ -361,7 +349,7 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
     char hostname[MAXNAMELEN+1]={0},reqopts[MAXNAMELEN+1]={0},clientidentifier[MAXNAMELEN+1]={0};
     char vendorname[MAXNAMELEN+1]={0},userclass[MAXNAMELEN+1]={0},duid[MAXNAMELEN+1]={0};
     u32 hostname_len = 0, reqopts_len = 0, vendorname_len = 0, clientidentifier_len = 0, userclass_len = 0, duid_len = 0;
-    u8 *start = (u8 *)&req[1];
+    u8 *start = (u8 *)&req->options[0];
     u8 *end = ((u8 *)request->payload) + request->payload_len;
     u16 otype, olen;
     u8 *odata;

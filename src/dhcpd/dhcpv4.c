@@ -521,5 +521,5 @@ PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_pac
 #endif
 
     packet_save_log(packet_process, (struct dhcpv4_message *)packet->payload, packet->v4.msgcode, "发送报文[v4服务][C]");
-    ipc_send_data(packet_process, buffer, length);
+    return ipc_send_data(packet_process, buffer, length);
 }

@@ -45,14 +45,14 @@ typedef struct {
 } vdhcpd_cfg_t;
 
 typedef struct {
-    int sockfd_raw4;
-    int sockfd_raw6;//原始套接字[用于发送中继报文]
     int sockfd_main;//
-    int sockfd_relay4;//中继[ipv4]
-    int sockfd_relay6;//中继[ipv6]
     int sockfd_api;//
     int sockfd_webaction;
     int filter_subnet;//子网过滤
+
+    //中继监听
+    int sockfd_relay4;//中继[ipv4]
+    int sockfd_relay6;//中继[ipv6]
 
     xTHREAD relay4Thread;
     xTHREAD relay6Thread;

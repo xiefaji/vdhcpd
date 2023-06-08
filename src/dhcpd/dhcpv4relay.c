@@ -109,10 +109,6 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
 
     unsigned char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0;
-    struct iphdr *pIPHeader = (struct iphdr *)&buffer[offset];
-    offset += sizeof(struct iphdr);
-    struct udphdr *pUDPHeader = (struct udphdr *)&buffer[offset];
-    offset += sizeof(struct udphdr);
     struct dhcpv4_message *relay = (struct dhcpv4_message *)&buffer[offset];
 
     //DHCP报文封装
@@ -146,34 +142,12 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
     dhcpv4_put(relay, &cookie, DHCPV4_OPT_END, 0, NULL);
     length += PACKET4_SIZE(relay, cookie);
 
-    //封装UDP Header
-    length += sizeof(struct udphdr);
-    pUDPHeader->len = htons(length);
-    pUDPHeader->dest = dhcpd_server->dhcprelay.v4.serverport;
-    pUDPHeader->source = htons(DHCPV4_SERVER_PORT);
-    pUDPHeader->check = 0;
-
-    //封装IP Header
-    length += sizeof(struct iphdr);
-    pIPHeader->version = 0x4;
-    pIPHeader->ihl = 0x5;
-    pIPHeader->tos = 254;
-    pIPHeader->tot_len = htons(length);
-    pIPHeader->id = getpid();
-    pIPHeader->frag_off = htons(0x4000);
-    pIPHeader->ttl = 64;
-    pIPHeader->protocol = IPPROTO_UDP;
-    pIPHeader->check = 0;
-    pIPHeader->saddr = dhcpd_server->dhcprelay.v4.lineip.address;
-    pIPHeader->daddr = dhcpd_server->dhcprelay.v4.serverip.address;
-    WinDivertHelperCalcChecksums(buffer, length, 0);//计算校验和
-
     struct sockaddr_in sto;
     sto.sin_family = AF_INET;
     sto.sin_addr.s_addr = dhcpd_server->dhcprelay.v4.serverip.address;
     sto.sin_port = dhcpd_server->dhcprelay.v4.serverport;
     packet_save_log(packet_process, (struct dhcpv4_message *)request->payload, request->v4.msgcode, "发送报文[v4中继][S]");
-    return sendto(packet_process->vdm->sockfd_raw4, buffer, length, 0, (struct sockaddr *)&sto, sizeof(struct sockaddr));
+    return sendto(packet_process->vdm->sockfd_relay4, buffer, length, 0, (struct sockaddr *)&sto, sizeof(struct sockaddr));
 }
 
 //RX
@@ -294,5 +268,5 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
 #endif
 
     packet_save_log(packet_process, (struct dhcpv4_message *)request->relay_payload, request->v4.msgcode, "发送报文[v4中继][C]");
-    ipc_send_data(packet_process, buffer, length);
+    return ipc_send_data(packet_process, buffer, length);
 }
