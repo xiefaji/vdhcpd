@@ -478,7 +478,7 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
 #ifndef VERSION_VNAAS
-    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 4"
+    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 4 "
                                 "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
                                 "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
              dhcpd_server->dhcprelay.v4.lineid, ntohl(dhcpd_server->dhcprelay.v4.serverip.address));
@@ -520,7 +520,7 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
 {
     char sql[MINBUFFERLEN+1]={0};
-//    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 6"
+//    snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbinterfacelineip a WHERE a.nLineid = %u and nIPver = 6 "
 //                                "AND INET_ATON(a.szIP) & (0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF = %u &  "
 //                                "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
 //             dhcpd_server->dhcprelay.v6.lineid, ntohl(dhcpd_server->dhcprelay.v6.serverip.address));
