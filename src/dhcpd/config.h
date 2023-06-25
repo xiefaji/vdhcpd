@@ -1,7 +1,7 @@
 #ifndef _dhcp_config_h
 #define _dhcp_config_h
 #define PACKAGE_NAME "DHCP Daemon"
-#define PACKAGE_VERSION "2023061601"
+#define PACKAGE_VERSION "2023062501"
 #define PACKAGE_MODULES "DHCP服务端"
 
 //默认配置路径
@@ -21,9 +21,11 @@
 #ifndef VERSION_VNAAS
 #define DEFAULT_DBNAME "xspeeder"
 #define DBTABLE_DHCP_SERVER "tbdhcpconfig"
+#define DBTABLE_DHCP_MACACL_GROUP "tbdhcpmacaclgroup"
 #else
 #define DEFAULT_DBNAME "vnaaspop"
 #define DBTABLE_DHCP_SERVER "tbdhcpserver"
+#define DBTABLE_DHCP_MACACL_GROUP "tbdhcpmacgroup"
 #endif
 
 #include "share/defines.h"

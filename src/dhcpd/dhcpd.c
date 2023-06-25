@@ -126,8 +126,8 @@ PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
                        (u32)time(NULL), getpid(), (u32)time(NULL), getpid());
 #else
     int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbservice_info (`szService`,`szVersion`,`dStart`,`nPid`) "
-                                          "VALUES ('vnass_dhcpd','"PACKAGE_VERSION"',CURRENT_TIMESTAMP(),%u) "
-                                          "ON DUPLICATE KEY UPDATE `szVersion`='"PACKAGE_VERSION"',`dStart`=CURRENT_TIMESTAMP(),`nPid`=%u;",
+                                          "VALUES ('vnass_dhcpd','"PACKAGE_VERSION"',now(),%u) "
+                                          "ON CONFLICT(szService) DO UPDATE SET `szVersion`='"PACKAGE_VERSION"',`dStart`=now(),`nPid`=%u;",
                        getpid(), getpid());
 #endif
     db_event->sql = strndup(sql, len);

@@ -276,7 +276,11 @@ PRIVATE void realtime_info_update_lease4(realtime_info_t *realtime_info)
     char sql[MAXBUFFERLEN+1]={0};
     int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcplease6 (`ipaddr`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`,`ipversion`) "
                                           "VALUES ('"IPV4FMT"','"MACADDRFMT"','%s',%u,%u,%u,%u,%u,%u,%u,'%s','%s',%u, 4) "
+                   #ifndef VERSION_VNAAS
                                           "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
+                   #else
+                                          "ON CONFLICT(ipaddr) DO UPDATE SET `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
+                   #endif
                                           "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
                        IPV4BYTES(realtime_info->v4.ipaddr), MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
                        RLTINFO_IS_STATIC4(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info),
@@ -295,7 +299,11 @@ PRIVATE void realtime_info_update_lease6(realtime_info_t *realtime_info)
     char sql[MAXBUFFERLEN+1]={0};
     int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcplease6 (`ipaddr`,`mac`,`hostname`,`start`,`expire`,`flag`,`lineid`,`innervlan`,`outervlan`,`isProbe`,`GMname`,`vendor`,`isRelay`,`ipversion`) "
                                           "VALUES ('%s','"MACADDRFMT"','%s',%u,%u,%u,%u,%u,%u,%u,'%s','%s',%u,6) "
+                   #ifndef VERSION_VNAAS
                                           "ON DUPLICATE KEY UPDATE `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
+                   #else
+                                          "ON CONFLICT(ipaddr) DO UPDATE SET `mac`='"MACADDRFMT"',`hostname`='%s',`start`=%u,`expire`=%u,`flag`=%u,`lineid`=%u,`innervlan`=%u,`outervlan`=%u,"
+                   #endif
                                           "`isProbe`=%u,`GMname`='%s',`vendor`='%s',`isRelay`=%u;",
                        ipaddr, MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v6.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME6(realtime_info),
                        RLTINFO_IS_STATIC6(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info),

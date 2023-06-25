@@ -60,7 +60,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     char sql[MINBUFFERLEN+1]={0};
-    snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpmacaclgroup;");
+    snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_MACACL_GROUP);
 
     PMYDBOP pDBHandle = &xHANDLE_Mysql;
     MYSQLRECORDSET Query={0};

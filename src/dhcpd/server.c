@@ -327,7 +327,7 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
 #ifndef VERSION_VNAAS
         snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->nLineID);
 #else
-        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP4 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->nLineID);
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP AS szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND a.nIPVer = 4;", dhcpd_server->nLineID);
 #endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
@@ -453,9 +453,9 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
         BZERO(sql, sizeof(sql));
 #ifndef VERSION_VNAAS
-        snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid=%u;", dhcpd_server->nLineID);
+        snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->nLineID);
 #else
-        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP6 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->nLineID);
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP AS szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND a.nIPVer = 6;", dhcpd_server->nLineID);
 #endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
@@ -500,7 +500,7 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 #ifndef VERSION_VNAAS
         snprintf(sql, MINBUFFERLEN, "SELECT INET_NTOA(a.ip) AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->dhcprelay.v4.lineid);
 #else
-        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP4 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->dhcprelay.v4.lineid);
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP AS szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND a.nIPVer = 4;", dhcpd_server->dhcprelay.v4.lineid);
 #endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
@@ -536,7 +536,7 @@ PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
 #ifndef VERSION_VNAAS
         snprintf(sql, MINBUFFERLEN, "SELECT a.ipv6 AS szIP FROM tbinterfaceline a WHERE a.lineid = %u;", dhcpd_server->dhcprelay.v6.lineid);
 #else
-        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP6 AS szIP FROM tbsw_if_eth a WHERE a.nSwID = %u;", dhcpd_server->dhcprelay.v6.lineid);
+        snprintf(sql, MINBUFFERLEN, "SELECT a.szIP AS szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND a.nIPVer = 6;", dhcpd_server->dhcprelay.v6.lineid);
 #endif
         CSqlRecorDset_ExecSQL(&Query, sql);
     }
