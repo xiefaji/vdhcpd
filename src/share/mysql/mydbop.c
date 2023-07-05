@@ -3,6 +3,7 @@
 #include "mydbop.h"
 
 MYDBOP xHANDLE_Mysql;
+MYDBOP xHANDLE_Mysql2;
 
 PUBLIC void MyDBOp_Init(PMYDBOP pMyDB)
 {

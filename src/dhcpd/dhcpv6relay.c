@@ -163,7 +163,7 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
     dhcp_packet_t *request = &packet_process->request;
 
     unsigned char buffer[MAXBUFFERLEN+1]={0};
-    unsigned int offset = 0, length = 0, opts_offset = 0;;
+    unsigned int offset = 0, length = 0, opts_offset = 0;
     struct dhcpv6_relay_header *relay = (struct dhcpv6_relay_header *)&buffer[offset];
 
     //DHCP报文封装

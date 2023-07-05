@@ -3,6 +3,7 @@
 
 #include "share/defines.h"
 #include "share/types.h"
+#include "share/mysql/mydbop.h"
 #include "share/list/listdemo.h"
 #include "public/rbtree_common.h"
 
@@ -12,6 +13,7 @@ enum db_process_type {
 
 typedef struct {
     struct list_head item_event;
+    PMYDBOP pHANDLE;
     u32 flags;
     char *sql;
 } db_event_t;
