@@ -14,9 +14,86 @@ DEFINES += _GNU_SOURCE
 #DEFINES += VERSION_VNAAS
 
 INCLUDEPATH += src
-LIBS += -lpthread -ldl -lz
-LIBS += -ljemalloc -lresolv
-LIBS += -L/usr/lib64/mysql -lmysqlclient
+
+#x86_64
+contains (QT_ARCH, x86_64) {
+message("x86_64")
+
+LIBS += -lpthread -lresolv
+LIBS += -ljemalloc
+
+#mysql
+INCLUDEPATH += /usr/include/mysql
+LIBS += -L/usr/lib64/mysql -lmysqlclient -g
+
+#zlib
+LIBS += -lz
+}
+
+#AARCH64
+contains (QT_ARCH, arm64) {
+message("aarch64")
+CONFIG (debug, debug|release) {
+target.path=/tmp/router/debug
+}
+
+CONFIG (release, debug|release) {
+target.path=/tmp/router/release
+}
+
+LIBS += -ldl -lpthread -lzstd -lresolv
+LIBS += -L/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/jemalloc/lib64 -ljemalloc
+
+#mysql
+INCLUDEPATH += /opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/mysql/include
+LIBS += -L/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/mysql/lib -lmysqlclient -g
+
+#zlib
+INCLUDEPATH += /opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/zlib/include
+LIBS += -L/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/zlib/lib -lz
+
+#openssl
+INCLUDEPATH += /opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/openssl/include
+LIBS += -L /opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/openssl/lib -lssl -lcrypt -lcrypto
+}
+
+include(deployment.pri) qtcAddDeployment()
+
+SOURCES += \
+    src/public/receive.c \
+    src/public/receive_bucket.c \
+    src/public/xthread.c \
+    src/share/array/queue.c \
+    src/share/array/trashqueue.c \
+    src/share/bitmap/bitmap.c \
+    src/share/cjson/cjson.c \
+    src/share/inifile/inifile.c \
+    src/share/mysql/mydbop.c \
+    src/share/mysql/mysqldb.c \
+    src/share/rbtree/key_elem.c \
+    src/share/rbtree/rbtree.c \
+    src/share/rbtree/set_elem.c \
+    src/share/rbtree/tag_elem.c \
+    src/share/hash.c \
+    src/share/magic.c \
+    src/share/md5.c \
+    src/share/misc.c \
+    src/share/windivert.c \
+    src/share/xlog.c \
+    src/dhcpd/acl.c \
+    src/dhcpd/api.c \
+    src/dhcpd/dhcpd.c \
+    src/dhcpd/dhcpstats.c \
+    src/dhcpd/dhcpv4.c \
+    src/dhcpd/dhcpv4relay.c \
+    src/dhcpd/dhcpv6.c \
+    src/dhcpd/dhcpv6relay.c \
+    src/dhcpd/local.c \
+    src/dhcpd/realtime.c \
+    src/dhcpd/server.c \
+    src/dhcpd/staticlease.c \
+    src/dhcpd/webaction.c \
+    src/main.c
 
 HEADERS += \
     src/public/rbtree_common.h \
@@ -60,39 +137,3 @@ HEADERS += \
     src/dhcpd/realtime.h \
     src/dhcpd/server.h \
     src/dhcpd/staticlease.h
-
-SOURCES += \
-    src/public/receive.c \
-    src/public/receive_bucket.c \
-    src/public/xthread.c \
-    src/share/array/queue.c \
-    src/share/array/trashqueue.c \
-    src/share/bitmap/bitmap.c \
-    src/share/cjson/cjson.c \
-    src/share/inifile/inifile.c \
-    src/share/mysql/mydbop.c \
-    src/share/mysql/mysqldb.c \
-    src/share/rbtree/key_elem.c \
-    src/share/rbtree/rbtree.c \
-    src/share/rbtree/set_elem.c \
-    src/share/rbtree/tag_elem.c \
-    src/share/hash.c \
-    src/share/magic.c \
-    src/share/md5.c \
-    src/share/misc.c \
-    src/share/windivert.c \
-    src/share/xlog.c \
-    src/dhcpd/acl.c \
-    src/dhcpd/api.c \
-    src/dhcpd/dhcpd.c \
-    src/dhcpd/dhcpstats.c \
-    src/dhcpd/dhcpv4.c \
-    src/dhcpd/dhcpv4relay.c \
-    src/dhcpd/dhcpv6.c \
-    src/dhcpd/dhcpv6relay.c \
-    src/dhcpd/local.c \
-    src/dhcpd/realtime.c \
-    src/dhcpd/server.c \
-    src/dhcpd/staticlease.c \
-    src/dhcpd/webaction.c \
-    src/main.c
