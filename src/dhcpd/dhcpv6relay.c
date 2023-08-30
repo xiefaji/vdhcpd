@@ -164,6 +164,10 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
 
     unsigned char buffer[MAXBUFFERLEN+1]={0};
     unsigned int offset = 0, length = 0, opts_offset = 0;
+    struct ip6_hdr *pIP6Header = (struct ip6_hdr *)&buffer[offset];
+    offset += sizeof(struct ip6_hdr);
+    struct udphdr *pUDPHeader = (struct udphdr *)&buffer[offset];
+    offset += sizeof(struct udphdr);
     struct dhcpv6_relay_header *relay = (struct dhcpv6_relay_header *)&buffer[offset];
 
     //DHCP报文封装
@@ -193,12 +197,34 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
     opts_offset += strlen(PACKAGE_NAME) + sizeof(struct dhcpv6_option);
     length += opts_offset;
 
+    //封装UDP Header
+    length += sizeof(struct udphdr);
+    pUDPHeader->len = htons(length);
+    pUDPHeader->dest = dhcpd_server->dhcprelay.v6.serverport;
+    pUDPHeader->source = htons(DHCPV6_SERVER_PORT);
+    pUDPHeader->check = 0;
+
+    //封装IP Header
+    pIP6Header->ip6_vfc = 0x6e;
+    pIP6Header->ip6_plen = htons(length);
+    pIP6Header->ip6_nxt = IPPROTO_UDP;
+    pIP6Header->ip6_hlim = 255;
+#ifndef VERSION_VNAAS
+#define DEFAULT_LCP_IP6 "fe80::0a7f:7afd"
+    inet_pton(AF_INET6, DEFAULT_LCP_IP6, &pIP6Header->ip6_src);
+#else
+    pIP6Header->ip6_src = dhcpd_server->dhcprelay.v6.lineip.addr;
+#endif
+    pIP6Header->ip6_dst = dhcpd_server->dhcprelay.v6.serverip.addr;
+    length += sizeof(struct ip6_hdr);
+    WinDivertHelperCalcChecksums(buffer, length, 0);//计算校验和
+
     struct sockaddr_in6 sto;
     sto.sin6_family = AF_INET6;
     sto.sin6_addr = dhcpd_server->dhcprelay.v6.serverip.addr;
-    sto.sin6_port = dhcpd_server->dhcprelay.v6.serverport;
+    sto.sin6_port = htons(IPPROTO_RAW);
     packet_save_log6(packet_process, (struct dhcpv6_client_header *)request->payload, request->v6.msgcode, "发送报文[v6中继][S]");
-    int a = sendto(packet_process->vdm->sockfd_relay6, buffer, length, 0, (struct sockaddr_in6 *)&sto, sizeof(struct sockaddr_in6));
+    int a = sendto(packet_process->vdm->sockfd_raw6, buffer, length, 0, (struct sockaddr_in6 *)&sto, sizeof(struct sockaddr_in6));
     if (a < 0)  perror(strerror(errno));
     return 0;
 }

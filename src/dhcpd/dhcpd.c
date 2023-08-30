@@ -72,6 +72,8 @@ PUBLIC int vdhcpd_init()
     database_connect();
 
     vdm->sockfd_main = -1;
+    vdm->sockfd_raw4 = -1;
+    vdm->sockfd_raw6 = -1;
     vdm->sockfd_relay4 = -1;
     vdm->sockfd_relay6 = -1;
     vdm->sockfd_api = -1;
@@ -91,6 +93,10 @@ PUBLIC int vdhcpd_release()
 
     if (vdm->sockfd_main > 0) close(vdm->sockfd_main);
     vdm->sockfd_main = -1;
+    if (vdm->sockfd_raw4 > 0) close(vdm->sockfd_raw4);
+    vdm->sockfd_raw4 = -1;
+    if (vdm->sockfd_raw6 > 0) close(vdm->sockfd_raw6);
+    vdm->sockfd_raw6 = -1;
     if (vdm->sockfd_relay4 > 0) close(vdm->sockfd_relay4);
     vdm->sockfd_relay4 = -1;
     if (vdm->sockfd_relay6 > 0) close(vdm->sockfd_relay6);

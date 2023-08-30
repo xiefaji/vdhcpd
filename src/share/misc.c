@@ -115,15 +115,15 @@ PUBLIC int create_udp_socket(const unsigned short listenport, int local, int tim
         return -1;
     }
 
-//    int one = 1;
-//    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
-//    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
+    int one = 1;
+    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
 
-//    if (reuseport) {
-//        one = 1;
-//        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
-//        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__,strerror(errno));
-//    }
+    if (reuseport) {
+        one = 1;
+        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
+        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__,strerror(errno));
+    }
 
     if (listenport) {
         struct sockaddr_in sin={0};
@@ -153,15 +153,15 @@ PUBLIC int create_udp_socket6(const unsigned short listenport, int local, int ti
         return -1;
     }
 
-//    int one = 1;
-//    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
-//    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
+    int one = 1;
+    int r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
+    if (r < 0) x_log_warn("%s : REUSEADDR失败[%s].", __FUNCTION__, strerror(errno));
 
-//    if (reuseport) {
-//        one = 1;
-//        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
-//        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__,strerror(errno));
-//    }
+    if (reuseport) {
+        one = 1;
+        r = setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, (char*)&one, sizeof(one));
+        if (r < 0) x_log_warn("%s : REUSEPORT失败[%s].", __FUNCTION__,strerror(errno));
+    }
 
     if (listenport) {
         struct sockaddr_in6 sin = {AF_INET6, htons(listenport), 0, IN6ADDR_ANY_INIT, 0};

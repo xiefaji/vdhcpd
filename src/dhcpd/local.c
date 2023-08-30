@@ -16,6 +16,18 @@ PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
         exit(0);
     }
 
+    vdm->sockfd_raw4 = create_raw_socket(1, 1, NULL);
+    if (vdm->sockfd_raw4 < 0) {
+        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw 4].", __FUNCTION__, __LINE__);
+        exit(0);
+    }
+
+    vdm->sockfd_raw6 = create_raw_socket6(1, 1, NULL);
+    if (vdm->sockfd_raw6 < 0) {
+        x_log_warn("%s:%d 创建SOCKET失败[MAIN Raw 6].", __FUNCTION__, __LINE__);
+        exit(0);
+    }
+
     //申请数据包接收BUFFER
     receive_bucket = receive_bucket_allocate(1, MAXBUFFERLEN, 0);
     assert(receive_bucket);
