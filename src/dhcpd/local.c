@@ -194,9 +194,9 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
         request->l3len = ntohs(iphdr->tot_len);
         request->l4len = ntohs(udphdr->len);
         request->payload = (unsigned char *)(request->udphdr + 1);
-        request->payload_len = l3len - iphdr_len - sizeof(struct udphdr);
+        request->payload_len = request->l3len - iphdr_len - sizeof(struct udphdr);
 
-        if (l3len != request->l3len || l4len != request->l4len || iphdr_len < 20 || ((l4len + iphdr_len) != l3len)) {
+        if (l3len < request->l3len || l4len < request->l4len || iphdr_len < 20 || ((l4len + iphdr_len) != l3len)) {
             x_log_warn("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv4_PROCESS,
                       l3len, request->l3len, l4len, request->l4len, iphdr_len);
             retcode = -1;
@@ -211,9 +211,9 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
         request->l3len = ntohs(ip6hdr->ip6_plen) + iphdr_len;
         request->l4len = ntohs(udphdr->len);
         request->payload = (unsigned char *)(request->udphdr + 1);
-        request->payload_len = l3len - iphdr_len - sizeof(struct udphdr);
+        request->payload_len = request->l3len - iphdr_len - sizeof(struct udphdr);
 
-        if (l3len != request->l3len || l4len != request->l4len || iphdr_len < sizeof(struct ip6_hdr) || ((l4len + iphdr_len) != l3len)) {
+        if (l3len < request->l3len || l4len < request->l4len || iphdr_len < sizeof(struct ip6_hdr) || ((l4len + iphdr_len) != l3len)) {
             x_log_warn("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv6_PROCESS,
                       l3len, request->l3len, l4len, request->l4len, iphdr_len);
             retcode = -1;
