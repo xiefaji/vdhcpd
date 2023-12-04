@@ -8,6 +8,7 @@
 
 PUBLIC vdhcpd_main_t vdhcpd_main;
 PUBLIC time_t global_time;
+PUBLIC cfg_mysql_t cfg_mysql;
 PRIVATE int urandom_fd = -1;
 PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm);
 PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash);
@@ -16,27 +17,23 @@ PRIVATE vdhcpd_cfg_t *vdhcpd_cfg_reload();
 PRIVATE void vdhcpd_cfg_release(vdhcpd_cfg_t *cfg_main);
 PRIVATE void vdhcpd_cfg_recycle(vdhcpd_cfg_t *cfg_main, trash_queue_t *pRecycleTrash);
 
-PRIVATE void database_connect()
+PUBLIC int database_init()
 {
-    MyDBOp_Init(&xHANDLE_Mysql);
-    vradiusd_cfg_mysql_t cfg_mysql;
-    vradiusd_cfg_get_mysql(&cfg_mysql);
-    if (!MyDBOp_OpenDB(&xHANDLE_Mysql, cfg_mysql.user, cfg_mysql.pass, cfg_mysql.dbname, cfg_mysql.ip, cfg_mysql.port)) {
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
-        exit(0);
-    }
-    x_log_info("%s:%d 数据库连接成功[%s].", __FUNCTION__, __LINE__, cfg_mysql.dbname);
-    MyDBOp_ExecSQL_1(&xHANDLE_Mysql, "set names utf8");
+    cfg_get_mysql(&cfg_mysql);
+    return 0;
+}
 
-#ifdef VERSION_VNAAS
-    MyDBOp_Init(&xHANDLE_Mysql2);
-    if (!MyDBOp_OpenDB(&xHANDLE_Mysql2, cfg_mysql.user, cfg_mysql.pass, "sxzinfo", cfg_mysql.ip, cfg_mysql.port)) {
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, "sxzinfo");
-        exit(0);
+PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
+{
+    MyDBOp_Init(pDBHandle);
+    if (!MyDBOp_OpenDB(pDBHandle, cfg_mysql.user, cfg_mysql.pass, dbname, cfg_mysql.ip, cfg_mysql.port)) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
+        return -1;
     }
-    x_log_info("%s:%d 数据库连接成功[%s].", __FUNCTION__, __LINE__, "sxzinfo");
-    MyDBOp_ExecSQL_1(&xHANDLE_Mysql2, "set names utf8");
-#endif
+    x_log_info("%s:%d 数据库连接成功[%s].", __FUNCTION__, __LINE__, dbname);
+    MyDBOp_ExecSQL_1(pDBHandle, "set names utf8");
+
+    return 0;
 }
 
 PUBLIC time_t vdhcpd_time(void)
@@ -68,8 +65,6 @@ PUBLIC int vdhcpd_init()
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
     BZERO(vdm, sizeof(vdhcpd_main_t));
-
-    database_connect();
 
     vdm->sockfd_main = -1;
     vdm->sockfd_raw4 = -1;
@@ -112,9 +107,7 @@ PUBLIC int vdhcpd_release()
     server_stats_main_release();
     macaddr_filter_release(vdm->filter_tree);
     vdhcpd_urandom_release();
-    MyDBOp_Destroy(&xHANDLE_Mysql);
 #ifdef VERSION_VNAAS
-    MyDBOp_Destroy(&xHANDLE_Mysql2);
     unlink(VNAAS_DHCP_IPC_DGRAM_SOCK);
     unlink(VNAAS_DHCP_API_DGRAM_SOCK);
 #endif
@@ -134,23 +127,27 @@ PUBLIC int vdhcpd_shutdown()
 
 PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
 {
-    db_event_t *db_event = db_event_init(DPF_NORMAL);
     char sql[MINBUFFERLEN+1]={0};
+    char *dbname = NULL;
 #ifndef VERSION_VNAAS
     int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbserverinfo (`server`,`ver`,`start`,`pid`) "
                                           "VALUES ('xsdhcp','"PACKAGE_VERSION"',%u,%u) "
                                           "ON DUPLICATE KEY UPDATE `ver`='"PACKAGE_VERSION"',`start`=%u,`pid`=%u;",
                        (u32)time(NULL), getpid(), (u32)time(NULL), getpid());
-    db_event->pHANDLE = &xHANDLE_Mysql;
+    dbname = cfg_mysql.dbname;
 #else
     int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbservice_info (`szService`,`szVersion`,`dStart`,`nPid`) "
                                           "VALUES ('vnass_dhcpd','"PACKAGE_VERSION"',now(),%u) "
                                           "ON CONFLICT(szService) DO UPDATE SET `szVersion`='"PACKAGE_VERSION"',`dStart`=now(),`nPid`=%u;",
                        getpid(), getpid());
-    db_event->pHANDLE = &xHANDLE_Mysql2;
+    dbname = "sxzinfo";
 #endif
-    db_event->sql = strndup(sql, len);
-    db_process_push_event(&vdm->db_process, db_event);
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, dbname) < 0)
+        return ;
+    MyDBOp_ExecSQL(&DBHandle, sql);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 PUBLIC int vdhcpd_start()
@@ -214,33 +211,27 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
 PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
-    db_event_t *db_event = NULL;
 
-    PRIVATE unsigned int lasttick_mysql;
-    //数据库连接保活
-    if (CMP_COUNTER(lasttick_mysql, 60)) {
-        MyDBOp_Ping(&xHANDLE_Mysql);
-#ifdef VERSION_VNAAS
-        MyDBOp_Ping(&xHANDLE_Mysql2);
-#endif
-        SET_COUNTER(lasttick_mysql);
-    }
-
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    int dbsuccess = (0 == database_connect(&DBHandle, cfg_mysql.dbname)) ? 1:0;
     u32 stattime;//确保不一直执行SQL
     SET_COUNTER(stattime);
-    while (NULL != (db_event = db_process_pop_event(&vdm->db_process)) && !CMP_COUNTER(stattime, MIN_RELEASE_INTERVAL / 3)) {
+    db_event_t *db_event = NULL;
+    while (dbsuccess && NULL != (db_event = db_process_pop_event(&vdm->db_process)) && !CMP_COUNTER(stattime, MIN_RELEASE_INTERVAL / 3)) {
 #ifdef CHECK_PERFORMANCE
         struct timeval ticktime;
         gettimeofday(&ticktime, NULL);
 #endif
 
-        if (db_event->sql) MyDBOp_ExecSQL_1(db_event->pHANDLE, db_event->sql);
+        if (db_event->sql) MyDBOp_ExecSQL(&DBHandle, db_event->sql);
 
         db_event_release(db_event);
 #ifdef CHECK_PERFORMANCE
         x_log_debug("%s : 性能测试[DB] delay[%.3f ms].", __FUNCTION__, get_delay(&ticktime));
 #endif
     }
+    if (dbsuccess) MyDBOp_CloseDB(&DBHandle);
     return xTHREAD_DEFAULT_SECOND_INTERVAL;
 }
 

@@ -14,8 +14,6 @@ typedef struct {
     unsigned short serverport;
     int m_nAlreadyInit;
 }MYDBOP,*PMYDBOP;
-extern MYDBOP xHANDLE_Mysql;
-extern MYDBOP xHANDLE_Mysql2;
 
 PUBLIC_DATA void MyDBOp_Init(PMYDBOP pMyDB);
 PUBLIC_DATA void MyDBOp_Destroy(PMYDBOP pMyDB);

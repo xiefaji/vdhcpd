@@ -72,8 +72,11 @@ typedef struct {
 } vdhcpd_main_t;
 PUBLIC_DATA vdhcpd_main_t vdhcpd_main;
 PUBLIC_DATA time_t global_time;
+PUBLIC_DATA cfg_mysql_t cfg_mysql;
 PUBLIC_DATA int filter_subnet;
 
+PUBLIC_DATA int database_init();
+PUBLIC_DATA int database_connect(PMYDBOP pDBHandle, const char *dbname);
 PUBLIC_DATA time_t vdhcpd_time(void);
 PUBLIC_DATA int vdhcpd_urandom(void *data, size_t len);
 PUBLIC_DATA int vdhcpd_init();

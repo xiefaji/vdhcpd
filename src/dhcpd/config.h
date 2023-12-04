@@ -1,20 +1,22 @@
 #ifndef _dhcp_config_h
 #define _dhcp_config_h
 #define PACKAGE_NAME "DHCP Daemon"
-#define PACKAGE_VERSION "2023091201"
+#define PACKAGE_VERSION "2023120401"
 #define PACKAGE_MODULES "DHCP服务端"
 
 //默认配置路径
 #define PATH_LOGFILE  "/var/log/vdhcpd.log"
-#define PATH_LOCKFILE "/var/run/xsdhcp.lock"
-#define PATH_PIDFILE "/var/run/xsdhcp.pid"
 #define PATH_FINGERFILE "/opt/dhcpd.finger"
 #ifndef VERSION_VNAAS
 #define PATH_CONFILE  "/xspeeder/vdhcpd.conf"
 #define PATH_FILTERFILE "/xspeeder/dhcpd.filter"
+#define PATH_LOCKFILE "/var/run/xsdhcp.lock"
+#define PATH_PIDFILE "/var/run/xsdhcp.pid"
 #else
 #define PATH_CONFILE  "/vrouter/vdhcpd.conf"
 #define PATH_FILTERFILE "/vrouter/dhcpd.filter"
+#define PATH_LOCKFILE "/var/run/vdhcpd.lock"
+#define PATH_PIDFILE "/var/run/vdhcpd.pid"
 #endif
 
 //数据库定义
@@ -65,10 +67,10 @@ typedef struct {
     char user[MINNAMELEN+1];
     char pass[MINNAMELEN+1];
     char dbname[MINNAMELEN+1];
-} vradiusd_cfg_mysql_t;
-ALWAYS_INLINE void vradiusd_cfg_get_mysql(vradiusd_cfg_mysql_t *cfg_mysql)
+} cfg_mysql_t;
+ALWAYS_INLINE void cfg_get_mysql(cfg_mysql_t *cfg_mysql)
 {
-    BZERO(cfg_mysql, sizeof(vradiusd_cfg_mysql_t));
+    BZERO(cfg_mysql, sizeof(cfg_mysql_t));
     read_profile_string("mysql", "ip", cfg_mysql->ip, MINNAMELEN, "127.0.0.1", path_cfg.cfgfile);
     cfg_mysql->port = read_profile_int("mysql", "port", 8306, path_cfg.cfgfile);
     read_profile_string("mysql", "user", cfg_mysql->user, MINNAMELEN, "root", path_cfg.cfgfile);

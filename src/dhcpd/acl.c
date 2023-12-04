@@ -62,10 +62,13 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     char sql[MINBUFFERLEN+1]={0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_MACACL_GROUP);
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
@@ -83,6 +86,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //加载群组MAC地址
@@ -91,10 +95,13 @@ PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
     char sql[MINBUFFERLEN+1]={0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpmac WHERE groupid=%u;", macaddr_group->nID);
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
@@ -114,6 +121,7 @@ PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 PUBLIC void macaddr_acl_check(void *cfg)

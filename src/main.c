@@ -110,6 +110,8 @@ int main(int argc, char *argv[])
     xlog_set_level(NULL, xLOG_DEST_STDOUT, g_verbose);
     xlog_set_file(NULL, path_cfg.logfile, LOG_WARNING);
 
+    database_init();
+
     vdhcpd_init();
 
     vdhcpd_start();

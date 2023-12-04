@@ -245,7 +245,6 @@ PRIVATE void realtime_info_warning(realtime_info_t *realtime_info, const char *d
     char sql[MAXBUFFERLEN+1]={0};
     int len = snprintf(sql, MAXBUFFERLEN, "INSERT INTO tbdhcpalarm (`mac`,`time`,`msg`) VALUES ('"MACADDRFMT"',%u,'%s');",
                        MACADDRBYTES(realtime_info->key.u.macaddr), (u32)time(NULL), describe);
-    db_event->pHANDLE = &xHANDLE_Mysql;
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }
@@ -287,7 +286,6 @@ PRIVATE void realtime_info_update_lease4(realtime_info_t *realtime_info)
                        RLTINFO_IS_STATIC4(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info),
                        MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v4.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME4(realtime_info),
                        RLTINFO_IS_STATIC4(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v4.vendorname, RLTINFO_IS_RELAY4(realtime_info));
-    db_event->pHANDLE = &xHANDLE_Mysql;
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }
@@ -311,7 +309,6 @@ PRIVATE void realtime_info_update_lease6(realtime_info_t *realtime_info)
                        RLTINFO_IS_STATIC6(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info),
                        MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->v6.hostname, (u32)realtime_info->starttime, RLTINFO_EXPIRETIME6(realtime_info),
                        RLTINFO_IS_STATIC6(realtime_info)/*是否静态IP*/, realtime_info->lineid, realtime_info->ivlanid, realtime_info->ovlanid, 0, "NULL", realtime_info->v6.vendorname, RLTINFO_IS_RELAY6(realtime_info));
-    db_event->pHANDLE = &xHANDLE_Mysql;
     db_event->sql = strndup(sql, len);
     db_process_push_event(&vdm->db_process, db_event);
 }

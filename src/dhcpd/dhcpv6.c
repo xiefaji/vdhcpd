@@ -84,7 +84,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     case DHCPV6_MSG_DHCPV4_QUERY:
         break;
     case DHCPV6_MSG_DHCPV4_RESPONSE:
-            break;
+        break;
     default:
         break;
     }

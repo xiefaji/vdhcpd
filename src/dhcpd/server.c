@@ -45,10 +45,13 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     char sql[MINBUFFERLEN+1]={0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_SERVER);
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
@@ -198,6 +201,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 PRIVATE void dhcpd_server_reload_serverid(struct key_tree *key_serverid, const u32 nID)
@@ -205,10 +209,13 @@ PRIVATE void dhcpd_server_reload_serverid(struct key_tree *key_serverid, const u
     char sql[MINBUFFERLEN+1]={0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpserverfilter WHERE nID=%u;", nID);
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
@@ -223,6 +230,7 @@ PRIVATE void dhcpd_server_reload_serverid(struct key_tree *key_serverid, const u
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //参数校验[]
@@ -271,10 +279,13 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
                                 "WHERE a.nSwID = b.nSwID AND a.nSwID = %u;", dhcpd_server->nLineID);
 #endif
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (CSqlRecorDset_GetRecordCount(&Query)) {
@@ -304,6 +315,7 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //读取线路网关IP[v4]
@@ -316,10 +328,13 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
     snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPVer = 4;", dhcpd_server->nLineID);
 #endif
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
@@ -341,6 +356,7 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //读取线路网关IP[v4] ALL
@@ -397,10 +413,13 @@ PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_qu
     snprintf(sql, MINBUFFERLEN, "SELECT a.szIP, a.nPrefix FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPVer = 4;", dhcpd_server->nLineID);
 #endif
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
 
@@ -432,6 +451,7 @@ PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_qu
 
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //读取线路网关IP[v6]
@@ -444,10 +464,13 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
     snprintf(sql, MINBUFFERLEN, "SELECT a.szIP FROM tbsw_more_ip a WHERE a.nSwID = %u AND nIPVer = 6;", dhcpd_server->nLineID);
 #endif
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
@@ -471,6 +494,7 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //读取中继线路[出口]配置[v4]
@@ -489,10 +513,13 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
              dhcpd_server->dhcprelay.v4.lineid, ntohl(dhcpd_server->dhcprelay.v4.serverip.address));
 #endif
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
@@ -514,6 +541,7 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //读取中继线路[出口]配置[v6]
@@ -525,10 +553,13 @@ PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
 //                                "(0xFFFFFFFF << (32 - nPrefix)) & 0xFFFFFFFF;",
 //             dhcpd_server->dhcprelay.v6.lineid, ntohl(dhcpd_server->dhcprelay.v6.serverip.address));
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     if (!CSqlRecorDset_GetRecordCount(&Query)) {
@@ -552,6 +583,7 @@ PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //DHCP服务查找

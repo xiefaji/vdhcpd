@@ -95,10 +95,13 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
     char sql[MINBUFFERLEN+1]={0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpfixed WHERE lineid=%u;", serverid);
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
@@ -125,6 +128,7 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32 serverid/*lineid*/)
@@ -132,10 +136,13 @@ PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32
     char sql[MINBUFFERLEN+1]={0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpfixed6 WHERE lineid=%u;", serverid);
 
-    PMYDBOP pDBHandle = &xHANDLE_Mysql;
+    MYDBOP DBHandle;
+    MyDBOp_Init(&DBHandle);
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
+        return ;
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, pDBHandle->m_pDB);
+    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
@@ -162,6 +169,7 @@ PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
+    MyDBOp_CloseDB(&DBHandle);
 }
 
 //静态租约查询
