@@ -1,0 +1,21 @@
+buildType:
+  default: asan
+  choices:
+    debug:
+      short: Debug
+      long: Debug
+      buildType: Debug
+    release:
+      short: Release
+      long: Release
+      buildType: Release
+    asan:
+      short: Asan
+      long: Instrument with Address Santizer
+      buildType: Debug
+      settings:
+        ENABLE_SANITIZE_ADDR: ON
+    gcov:
+      short: Gcov
+      long: 代码覆盖检查
+      buildType: gcov

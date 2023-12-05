@@ -53,7 +53,7 @@ PUBLIC int webaction_start(void *p, trash_queue_t *pRecycleTrash)
      struct sockaddr_un sin;
 #endif
      socklen_t slen = sizeof(sin);
-     int retlen = recvfrom(vdm->sockfd_webaction, buffer, MINBUFFERLEN, 0, (struct sockaddr *)&sin, &slen);
+     int retlen = recvfrom(vdm->sockfd_webaction, buffer, MAXBUFFERLEN, 0, (struct sockaddr *)&sin, &slen);
      if (retlen <= 0) {
          int err = errno;
          if (err != EAGAIN && err != EINTR)

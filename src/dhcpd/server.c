@@ -240,7 +240,8 @@ PUBLIC void dhcpd_server_check(void *cfg)
     struct key_node *knode = key_first(&cfg_main->key_servers);
     while (knode && knode->data) {
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
-        assert(!key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->nLineID, dhcpd_server));
+        struct key_node *knode = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->nLineID, dhcpd_server);
+        assert(!knode);
         //加载静态租约
         dhcpd_lease_main_reload(dhcpd_server->staticlease_main, dhcpd_server->nLineID);
         dhcpd_lease_main_check(dhcpd_server->staticlease_main);
