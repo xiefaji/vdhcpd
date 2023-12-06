@@ -116,15 +116,8 @@ struct dhcpv6_auth_reconfigure {
     u8 key[16];
 } __attribute__((packed));
 
-struct dhcpv6_ia_hdr {
-    u16 type;
-    u16 len;
-    u32 iaid;
-    u32 t1;
-    u32 t2;
-} __attribute__((packed));
-
-struct dhcpv6_ia_prefix {
+/* DHCPV6_OPT_IA_PREFIX */
+struct opt_ia_prefix {
     u16 type;
     u16 len;
     u32 preferred;
@@ -133,7 +126,8 @@ struct dhcpv6_ia_prefix {
     ip6_address_t addr;
 } __attribute__((packed));
 
-struct dhcpv6_ia_addr {
+/* DHCPV6_OPT_IA_ADDR */
+struct opt_ia_address {
     u16 type;
     u16 len;
     ip6_address_t addr;
@@ -141,7 +135,20 @@ struct dhcpv6_ia_addr {
     u32 valid;
 } __attribute__((packed));
 
-struct dhcpv6_cer_id {
+/* DHCPV6_OPT_IA_NA/DHCPV6_OPT_IA_PD */
+struct opt_ia_hdr {
+    u16 type;
+    u16 len;
+    u32 iaid;
+    u32 t1;
+    u32 t2;
+    union {
+        struct opt_ia_prefix ia_prefix;
+        struct opt_ia_address ia_addr;
+    } u;
+} __attribute__((packed));
+
+struct opt_cer_id {
     u16 type;
     u16 len;
     u16 reserved;
@@ -155,6 +162,10 @@ struct dhcpv6_option {
     u16 len;
     u8 data[0];
 } __attribute__((packed));
+
+struct domian_search_list {
+   u8 list_entry[12];
+};
 
 #define dhcpv6_for_each_option(start, end, otype, olen, odata)\
     for (u8 *_o = (u8 *)(start); _o + 4 <= (end) &&\

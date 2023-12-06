@@ -39,6 +39,8 @@ typedef struct {
             ip6_address_t reqaddr;//客户端请求的固定IP地址
             ip6_address_t ipaddr;//分配给客户端的IP地址
             u32 leasetime;//客户端请求的租约时长
+            u32 preferred;//hostbit
+            u32 iaid;//netbit
         } v6;
     };
 } dhcp_packet_t;

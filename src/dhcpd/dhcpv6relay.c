@@ -104,20 +104,26 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 
                 } break;
                 case DHCPV6_OPT_IA_NA: {
-                    struct dhcpv6_ia_hdr *ia = (struct dhcpv6_ia_hdr *)(reply_odata - 4);
-                    if (olen > 12) {
-                        struct dhcpv6_ia_addr *ia_a = (struct dhcpv6_ia_addr *)&reply_odata[12];
-                        BCOPY(&ia_a->addr, &request->v6.ipaddr, sizeof(ip6_address_t));//终端静态IP
-                        request->v6.leasetime = ntohl(ia_a->valid);//租约时长
+                    struct opt_ia_hdr *ia_hdr = (struct opt_ia_hdr *)(reply_odata - 4);
+                    u32 offset = offsetof(struct opt_ia_hdr, u) - 4;
+                    if (olen > offset) {
+                        struct opt_ia_address *ia_addr = (struct opt_ia_address *)&reply_odata[offset];
+                        BCOPY(&ia_addr->addr, &request->v6.ipaddr, sizeof(ip6_address_t));//终端静态IP
+                        request->v6.leasetime = ntohl(ia_addr->valid);//租约时长
+                    }
+                } break;
+                case DHCPV6_OPT_IA_PD: {
+                    struct opt_ia_hdr *ia_hdr = (struct opt_ia_hdr *)(reply_odata - 4);
+                    u32 offset = offsetof(struct opt_ia_hdr, u) - 4;
+                    if (olen > offset) {
+                        struct opt_ia_prefix *ia_prefix = (struct opt_ia_prefix *)&odata[offset];
+
                     }
                 } break;
                 case DHCPV6_OPT_DNS_SERVERS: {
 
                 } break;
                 case DHCPV6_OPT_DNS_DOMAIN: {
-
-                } break;
-                case DHCPV6_OPT_IA_PD: {
 
                 } break;
                 default:

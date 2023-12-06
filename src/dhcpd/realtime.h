@@ -42,6 +42,8 @@ typedef struct {
         u16 max_message_size;//57 netbit
         u16 max_message_size_len;
         u32 leasetime;//租约时长
+        bool rapid_commit;
+        bool ia_pd;
     } v6;
 
     time_t starttime;//租约启动时间

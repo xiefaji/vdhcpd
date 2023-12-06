@@ -53,6 +53,7 @@ struct vdhcpd_assignment {
     ip4_address_t gateway;//网关地址[netbit]
     ip4_address_t broadcast;//广播地址[netbit]
 
+    ip6_address_t ipaddr6;//请求的静态ip
     u64 hostid;//静态租约[V6]
     u32 nAreaID;//当前接入区域节点ID
     u16 vlanid,qinqid;//终端VLAN/QINQ hostbit
@@ -74,6 +75,7 @@ struct vdhcpd_assignment {
 
     //实际终端IP[IPv4/IPv6]
     ip4_address_t addr;
+    ip6_address_t addr6;
     union {
         u64 assigned_host_id;
         u32 assigned_subnet_id;

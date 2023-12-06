@@ -361,6 +361,7 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
     char hostname[MAXNAMELEN+1]={0},reqopts[MAXNAMELEN+1]={0},clientidentifier[MAXNAMELEN+1]={0};
     char vendorname[MAXNAMELEN+1]={0},userclass[MAXNAMELEN+1]={0},duid[MAXNAMELEN+1]={0};
     u32 hostname_len = 0, reqopts_len = 0, vendorname_len = 0, clientidentifier_len = 0, userclass_len = 0, duid_len = 0;
+    bool rapid_commit = false, ia_pd = false;
     u8 *start = (u8 *)&req->options[0];
     u8 *end = ((u8 *)request->payload) + request->payload_len;
     u16 otype, olen;
@@ -393,15 +394,29 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
             if (KEY_TREE_NODES(&dhcpd_server->key_serverid) && !key_rbsearch(&dhcpd_server->key_serverid, ipaddr.address))
                 return -1;//存在服务ID列表，但匹配失败
         }*/ else if (otype == DHCPV6_OPT_IA_NA) {
-            struct dhcpv6_ia_hdr *ia = (struct dhcpv6_ia_hdr *)(odata - 4);
-            if (olen > 12) {
-                struct dhcpv6_ia_addr *ia_a = (struct dhcpv6_ia_addr *)&odata[12];
-                BCOPY(&ia_a->addr, &request->v6.reqaddr, sizeof(ip6_address_t));//终端静态IP
-                request->v6.leasetime = ntohl(ia_a->valid);//租约时长
+            struct opt_ia_hdr *ia_hdr = (struct opt_ia_hdr *)(odata - 4);
+            request->v6.iaid = ia_hdr->iaid;
+            u32 offset = offsetof(struct opt_ia_hdr, u) - 4;
+            if (olen > offset) {
+                struct opt_ia_address *ia_addr = (struct opt_ia_address *)&odata[offset];
+                BCOPY(&ia_addr->addr, &request->v6.reqaddr, sizeof(ip6_address_t));//终端静态IP
+                request->v6.leasetime = ntohl(ia_addr->valid);//租约时长
+                request->v6.preferred = ntohl(ia_addr->preferred);
             }
+        } else if (otype == DHCPV6_OPT_IA_PD) {
+            struct opt_ia_hdr *ia_hdr = (struct opt_ia_hdr *)(odata - 4);
+            request->v6.iaid = ia_hdr->iaid;
+            u32 offset = offsetof(struct opt_ia_hdr, u) - 4;
+            if (olen > offset) {
+                struct opt_ia_prefix *ia_prefix = (struct opt_ia_prefix *)&odata[offset];
+
+            }
+            ia_pd = true;
         } else if (otype == DHCPV6_OPT_USER_CLASS) {
             userclass_len = olen;
             BCOPY(odata, userclass, olen);
+        } else if (otype == DHCPV6_OPT_RAPID_COMMIT) {
+            rapid_commit = true;
         }
     }
 
@@ -419,6 +434,8 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
     if (vendorname_len) { BCOPY(vendorname, realtime_info->v6.vendorname, MAXNAMELEN); realtime_info->v6.vendorname_len = vendorname_len; }
     if (clientidentifier_len) { BCOPY(clientidentifier, realtime_info->v6.clientidentifier, MAXNAMELEN); realtime_info->v6.clientidentifier_len = clientidentifier_len; }
     if (userclass_len) { BCOPY(userclass, realtime_info->v6.userclass, MAXNAMELEN); realtime_info->v6.userclass_len = userclass_len; }
+    if (rapid_commit) { realtime_info->v6.rapid_commit = true; }
+    if (ia_pd) { realtime_info->v6.ia_pd = true; }
     realtime_info_oth_update(realtime_info, 0);
     packet_save_log6(packet_process, (struct dhcpv6_client_header *)request->payload, request->v6.msgcode, "接收报文[v6服务][C]");
     return 0;
