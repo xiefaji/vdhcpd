@@ -27,8 +27,8 @@ set(SANITIZE_ADDR_OPTIONS
 
 if (ENABLE_SANITIZE_ADDR)
     message(STATUS "Enable Address Sanitizer")
-    add_compile_option(-fsantize=address)
-    add_link_options(-fsantize=address)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
 endif()
 
 # # 设置编译选项
