@@ -1,8 +1,12 @@
 #ifndef _dhcp_realtimie_h
 #define _dhcp_realtimie_h
 
+#include "share/array/trashqueue.h"
 #include "share/defines.h"
+#include "share/rbtree/key_elem.h"
+#include "share/rbtree/set_elem.h"
 #include "share/types.h"
+#include <stdbool.h>
 
 typedef union {
     u64 key_value;

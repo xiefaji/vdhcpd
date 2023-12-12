@@ -1,4 +1,6 @@
 #include "dhcpd.h"
+#include "share/defines.h"
+#include <netinet/in.h>
 
 //统计报文并发
 PRIVATE u32 randnum;
@@ -325,9 +327,12 @@ PRIVATE void realtime_info_save_finger(realtime_info_t *realtime_info, FILE *pFI
         if ((RLTINFO_IS_RELAY6(realtime_info) || RLTINFO_IS_SERVER6(realtime_info))) {
 
         }
-
-        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"ovlanid\":%u,\"ivlanid\":%u,\"finger4\":\"%s\",\"finger6\":\"%s\",\"leasetime4\":%u,\"leasetime6\":%u}\r\n",
-                MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->ovlanid, realtime_info->ivlanid, finger4, finger6, realtime_info->v4.leasetime, realtime_info->v6.leasetime);
+        char ip4[INET_ADDRSTRLEN];
+        char ip6[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET, &realtime_info->v4.ipaddr.address, ip4, sizeof(ip4));
+        inet_ntop(AF_INET6, &realtime_info->v6.ipaddr.ip_u8, ip6, sizeof(ip6));
+        fprintf(pFILE, "{\"macaddr\":\""MACADDRFMT"\",\"ovlanid\":%u,\"ivlanid\":%u,\"finger4\":\"%s\",\"finger6\":\"%s\",\"leasetime4\":%u,\"leasetime6\":%u\"ip4\":\"%s\".\"ip6\":\"%s\"}\r\n",
+                MACADDRBYTES(realtime_info->key.u.macaddr), realtime_info->ovlanid, realtime_info->ivlanid, finger4, finger6, realtime_info->v4.leasetime, realtime_info->v6.leasetime,ip4,ip6);
     }
 }
 

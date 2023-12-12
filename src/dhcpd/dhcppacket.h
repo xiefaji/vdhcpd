@@ -4,7 +4,10 @@
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
+#include <stdbool.h>
 
+#include "dhcpd/dhcpv4.h"
+#include "dhcpd/dhcpv6.h"
 #include "share/defines.h"
 #include "share/types.h"
 
