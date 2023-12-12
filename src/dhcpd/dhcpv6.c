@@ -1,4 +1,5 @@
 #include "dhcpd.h"
+#include "share/defines.h"
 
 PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_packet_t *packet, const struct sockaddr_in6 dest);
 
@@ -177,7 +178,7 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
     //如果分配信息中有预配置的IP地址（静态租约）
     if ((BCMP(&start, &raddr, sizeof(ip6_address_t))) &&
             BCMP(&end, &raddr, sizeof(ip6_address_t)) &&
-            (!find_assignment_by_ipaddr(packet_process, *raddr))) {
+            (!find_assignment_by_ipaddr(packet_process, *raddr))&&(!IPv6_ZERO(raddr))) {
         assigned = dhcpv6_insert_assignment(packet_process, a, *raddr);
         if (assigned)
             return true;
