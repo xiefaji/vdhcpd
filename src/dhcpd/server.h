@@ -56,6 +56,7 @@ typedef struct {
         ip6_address_t gateway;//网关地址 netbit
         u16 prefix;
         ip6_address_t dns[2];//DNS地址 netbit
+        ip6_address_t prefix_addr;
     } dhcpv6;
 
     //DHCP中继配置

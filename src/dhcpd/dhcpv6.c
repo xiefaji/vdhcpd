@@ -1,8 +1,21 @@
+#include "dhcpd/dhcpv6.h"
 #include "dhcpd.h"
 #include "share/defines.h"
+#include <netinet/in.h>
 
 PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_packet_t *packet, const struct sockaddr_in6 dest);
-
+PRIVATE ip6_address_t IPV6_HTONLLL(ip6_address_t address){
+    for(int i=0;i<4;i++){
+        address.ip_u32[i]=htonl(address.ip_u32[i]);
+    }
+    return address;
+}
+PRIVATE ip6_address_t IPV6_NTOHLLL(ip6_address_t address){
+    for(int i=0;i<4;i++){
+        address.ip_u32[i]=htonl(address.ip_u32[i]);
+    }
+    return address;
+}
 PUBLIC char *dhcpv6_msg_to_string(u8 reqmsg)
 {
     switch (reqmsg) {
@@ -130,7 +143,6 @@ PRIVATE bool dhcpv6_insert_assignment(packet_process_t *packet_process, struct v
     //c只是提供一个能够遍历的指针,存储虚拟 DHCP 分配的 IP 地址和配置信息的数据结构。
 
     // 检查是否有静态分配的 IP 地址与 MAC 地址匹配
-    //memcmp(s1,s2,l)=BCMP 比较两个内存区域的内容是否相等
     dhcpd_staticlease_t *staticlease = staticlease_search6_ipaddr(dhcpd_server->staticlease_main, addr);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;
@@ -165,6 +177,8 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
     ip6_address_t end;
     BCOPY(&dhcpd_server->dhcpv6.startip, &start, sizeof(ip6_address_t));
     BCOPY(&dhcpd_server->dhcpv6.endip, &end, sizeof(ip6_address_t));
+    //start=IPV6_HTONLLL(start);
+    end=IPV6_HTONLLL(end);
     bool assigned;
 
     if (!IPv6_ZERO(&a->ipaddr6)) {
@@ -329,6 +343,8 @@ PUBLIC int server6_process(packet_process_t *packet_process)
             dhcpv6_put(&rep, &cookie, DHCPV6_OPT_RAPID_COMMIT, 0, 0);
         }
     }
+    if(reqmsg==DHCPV6_MSG_INFORMATION_REQUEST)
+        dhcpv6_put(&rep, &cookie, DHCPV6_OPT_LIFETIME, 4,& a->leasetime);
 
     if (a) {
         BCOPY(&a->ipaddr6, &realtime_info->v6.ipaddr, sizeof(ip6_address_t));

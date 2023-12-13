@@ -189,8 +189,13 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_U32(&Query, "nAclMode", &dhcpd_server->macctl.aclmode);
         CSqlRecorDset_GetFieldValue_String(&Query, "szMacGroups", tmpbuffer, MINNAMELEN);
         ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
-#endif
-
+#endif 
+        for (int i=0; i<15; i++) {
+            if(i<dhcpd_server->dhcpv6.prefix/8)
+                dhcpd_server->dhcpv6.prefix_addr.ip_u8[i]=dhcpd_server->dhcpv6.endip.ip_u8[i];
+            else
+                dhcpd_server->dhcpv6.prefix_addr.ip_u8[i]=0;
+        }
         struct key_node *knode = key_rbinsert(&cfg_main->key_servers, dhcpd_server->nID, dhcpd_server);
         if (knode) {
             x_log_err("加载DHCP服务配置失败, ID冲突[%d].", dhcpd_server->nID);
