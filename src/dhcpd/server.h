@@ -2,6 +2,7 @@
 #define _dhcp_server_h
 
 #include "share/defines.h"
+#include "share/rbtree/key_elem.h"
 #include "share/types.h"
 #include "share/bitmap/bitmap_exactvlan.h"
 #include "share/bitmap/bitmap_vlan.h"

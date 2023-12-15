@@ -192,7 +192,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
 #endif 
         for (int i=0; i<15; i++) {
             if(i<dhcpd_server->dhcpv6.prefix/8)
-                dhcpd_server->dhcpv6.prefix_addr.ip_u8[i]=dhcpd_server->dhcpv6.endip.ip_u8[i];
+                dhcpd_server->dhcpv6.prefix_addr.ip_u8[i]=dhcpd_server->dhcpv6.gateway.ip_u8[i];
             else
                 dhcpd_server->dhcpv6.prefix_addr.ip_u8[i]=0;
         }

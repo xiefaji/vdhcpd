@@ -67,6 +67,7 @@ PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct v
     }
 
     /* Insert new node before c (might match list head) */
+    //head记录上一个节点和下一个节点信息
     a->addr = addr;
     dhcpd_server_stats_lock(server_stats);
     list_add_tail(&a->head, &c->head);
@@ -242,7 +243,6 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
         } else
             a->valid_until = now + MIN_RELEASE_INTERVAL;
     }
-
     return a;
 }
 
