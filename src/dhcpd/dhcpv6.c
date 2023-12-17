@@ -287,7 +287,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     u8 domain_search_list[12] = {6, 97, 97, 98, 98, 99, 99, 3, 99, 0x6f, 0x6d, 0x0};
     generate_ia_na(&ia_na, &addr6, packet_process);
     generate_ia_pd(&ia_pd, &prefix6, packet_process);
-    generate_duid(server_duid, packet_process->macaddr.addr);
+    generate_duid(server_duid, dhcpd_server->iface.macaddr.addr);
 
     switch (reqmsg) {
     case DHCPV6_MSG_SOLICIT: {

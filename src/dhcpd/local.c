@@ -1,5 +1,7 @@
 #include "dhcpd.h"
-
+#include <string.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
 PRIVATE receive_bucket_t *receive_bucket = NULL;
 
 PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
@@ -31,6 +33,8 @@ PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
     //申请数据包接收BUFFER
     receive_bucket = receive_bucket_allocate(1, MAXBUFFERLEN, 0);
     assert(receive_bucket);
+    
+    
     return 0;
 }
 
@@ -224,6 +228,7 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
         x_log_warn("%s:%d 未识别Processl数据类型[%u][%u].", __FUNCTION__, __LINE__, packet_process->dpi.process, errno);
         break;
     }
+
     return retcode;
 }
 
