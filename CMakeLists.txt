@@ -32,9 +32,9 @@ if (ENABLE_SANITIZE_ADDR)
 endif()
 
 # # 设置编译选项
-# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -Wno-unused -pg")
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -Wno-unused ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ")
 
 # 设置可执行文件的名称
 #set(TARGET vdhcp)
@@ -44,7 +44,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # 添加宏定义
 add_definitions(-D_GNU_SOURCE)
-add_definitions(-DVERSION_VNAAS)
+# add_definitions(-DVERSION_VNAAS)
 add_definitions(-DCHECK_PERFORMANCE)
 
 # 添加项目的头文件目录
@@ -139,7 +139,7 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} )
 # 添加链接库和路径（根据不同的架构）
 #if (CMAKE_SYSTEM_PROCESSOR  MATCHES   "x86_64")
     message("x86_64")
-    target_link_libraries(${PROJECT_NAME} -lpthread -lresolv -ljemalloc)
+    target_link_libraries(${PROJECT_NAME} -lpthread -lresolv )
     
     #mysql
     include_directories(/usr/include/mysql) #include
