@@ -101,9 +101,7 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
                     else if (reply_olen == 10 && reply_odata[0] == 0 && reply_odata[1] == 3)
                         BCOPY(&reply_odata[4], &packet_process->macaddr, sizeof(mac_address_t));
                     duid_len = reply_olen;
-                    BCOPY(reply_odata, duid, reply_olen);
-                    request->v6.duid_len=duid_len;
-                    BCOPY(duid,  request->v6.duid,duid_len);
+                    BCOPY(reply_odata, duid, reply_olen); 
                 } break;
                 case DHCPV6_OPT_SERVERID: {
 
@@ -201,12 +199,12 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
         interface_id__option.vlan_id=htons(packet_process->dpi.vlanid[0]);
     if(packet_process->dpi.vlanid[1])
         interface_id__option.second_id=htons(packet_process->dpi.vlanid[1]);
-    BCOPY(request->v6.duid, interface_id__option.duid, request->v6.duid_len); 
+    BCOPY(packet_process->realtime_info->v6.duid, interface_id__option.duid, packet_process->realtime_info->v6.duid_len); 
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//interface id
     opts->type = htons(DHCPV6_OPT_INTERFACE_ID);
-    opts->len = htons(6+request->v6.duid_len);
-    BCOPY(&interface_id__option, opts->data, request->v6.duid_len+6);
-    opts_offset +=((request->v6.duid_len+6) + sizeof(struct dhcpv6_option));
+    opts->len = htons(6+packet_process->realtime_info->v6.duid_len);
+    BCOPY(&interface_id__option, opts->data, packet_process->realtime_info->v6.duid_len+6);
+    opts_offset +=((packet_process->realtime_info->v6.duid_len+6) + sizeof(struct dhcpv6_option));
 
     //DHCP报文封装[REMOTE ID]
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//remote id

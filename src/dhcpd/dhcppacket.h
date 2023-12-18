@@ -43,9 +43,7 @@ typedef struct {
             ip6_address_t ipaddr;//分配给客户端的IP地址
             u32 leasetime;//客户端请求的租约时长
             u32 preferred;//hostbit
-            u32 iaid;//netbit
-            u8 duid[MAXNAMELEN+1];
-            u16 duid_len;
+            u32 iaid;//netbit 
         } v6;
     };
 } dhcp_packet_t;
