@@ -1,6 +1,7 @@
 #ifndef _VDHCPD_V6_H
 #define _VDHCPD_V6_H
 
+//#include "dhcpd/dhcppacket.h"
 #pragma once
 #include "share/defines.h"
 #include "share/types.h"
@@ -167,6 +168,14 @@ struct domian_search_list {
    u8 list_entry[12];
 };
 
+struct interface_id_option{
+    u16 type;
+    u16 len;   
+    u16 port_index;
+    u16 vlan_id;
+    u16 second_id;
+    u8 duid[MAXNAMELEN+1];
+} __attribute__((packed));
 #define dhcpv6_for_each_option(start, end, otype, olen, odata)\
     for (u8 *_o = (u8 *)(start); _o + 4 <= (end) &&\
     ((otype) = _o[0] << 8 | _o[1]) && ((odata) = (void *)&_o[4]) &&\

@@ -119,13 +119,20 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
     }
 
     /* try to assign the IP the client asked for */
-    if (start <= IPV4_NTOHL(raddr) && IPV4_NTOHL(raddr) <= end && !find_assignment_by_ipaddr(packet_process, raddr)) {
-        assigned = dhcpv4_insert_assignment(packet_process, a, raddr);/*固定IP地址*/
-        if (assigned) {
-            x_log_debug("接入服务[分配地址]: 固定IP地址 "IPV4FMT".", IPV4BYTES(a->addr));
+    if (start <= IPV4_NTOHL(raddr) && IPV4_NTOHL(raddr) <= end ) {
+        if(find_assignment_by_ipaddr(packet_process, raddr)){
+            a->addr=raddr;
             return true;
+            }
+        else{
+            assigned = dhcpv4_insert_assignment(packet_process, a, raddr);/*固定IP地址*/
+             if (assigned) { 
+                x_log_debug("接入服务[分配地址]: 固定IP地址 "IPV4FMT".", IPV4BYTES(a->addr));
+                return true;
+                }
         }
     }
+
 
     /* Seed RNG with checksum of hwaddress */
     for (size_t i = 0; i < sizeof(mac_address_t); ++i) {

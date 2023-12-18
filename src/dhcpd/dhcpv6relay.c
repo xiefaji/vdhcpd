@@ -1,4 +1,7 @@
 #include "dhcpd.h"
+#include "dhcpd/dhcpv6.h"
+#include "share/defines.h"
+#include <netinet/in.h>
 
 PRIVATE receive_bucket_t *receive_bucket = NULL;
 
@@ -99,6 +102,8 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
                         BCOPY(&reply_odata[4], &packet_process->macaddr, sizeof(mac_address_t));
                     duid_len = reply_olen;
                     BCOPY(reply_odata, duid, reply_olen);
+                    request->v6.duid_len=duid_len;
+                    BCOPY(duid,  request->v6.duid,duid_len);
                 } break;
                 case DHCPV6_OPT_SERVERID: {
 
@@ -279,6 +284,19 @@ PUBLIC int relay6_send_reply_packet(packet_process_t *packet_process)
     //DHCP报文封装
     BCOPY(request->relay_payload, payload, request->relay_payload_len);
     length += request->relay_payload_len;
+
+    struct interface_id_option interface_id__option;
+    interface_id__option.type=htons(18);
+    interface_id__option.len=htons(12);
+    interface_id__option.port_index=htons(DHCPV6_CLIENT_PORT);
+    if(packet_process->dpi.vlanid[0])
+        interface_id__option.vlan_id=htons(packet_process->dpi.vlanid[0]);
+    if(packet_process->dpi.vlanid[1])
+        interface_id__option.second_id=htons(packet_process->dpi.vlanid[1]);
+    BCOPY(request->v6.duid, interface_id__option.duid, request->v6.duid_len);
+    BCOPY(&interface_id__option, payload,10+request->v6.duid_len );
+    length+=(10+request->v6.duid_len);
+
 
     //封装UDP Header
     length += sizeof(struct udphdr);

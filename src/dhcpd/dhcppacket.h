@@ -44,6 +44,8 @@ typedef struct {
             u32 leasetime;//客户端请求的租约时长
             u32 preferred;//hostbit
             u32 iaid;//netbit
+            u8 duid[MAXNAMELEN+1];
+            u16 duid_len;
         } v6;
     };
 } dhcp_packet_t;
