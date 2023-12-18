@@ -169,8 +169,7 @@ struct domian_search_list {
 };
 
 struct interface_id_option{
-    u16 type;
-    u16 len;   
+ 
     u16 port_index;
     u16 vlan_id;
     u16 second_id;

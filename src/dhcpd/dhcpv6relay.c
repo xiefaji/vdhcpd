@@ -193,13 +193,21 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
     opts->len = htons(request->payload_len);
     BCOPY(request->payload, opts->data, request->payload_len);
     opts_offset += request->payload_len + sizeof(struct dhcpv6_option);
+
     //DHCP报文封装[INTERFACE ID]
-    struct interface_id_t interfaceid = {.driveid = htons(dhcpd_server->iface.driveid), .lineid = htons(dhcpd_server->nLineID), .serverid = htonl(dhcpd_server->nID)};
+    struct interface_id_option interface_id__option; 
+    interface_id__option.port_index=htons(DHCPV6_CLIENT_PORT);
+    if(packet_process->dpi.vlanid[0])
+        interface_id__option.vlan_id=htons(packet_process->dpi.vlanid[0]);
+    if(packet_process->dpi.vlanid[1])
+        interface_id__option.second_id=htons(packet_process->dpi.vlanid[1]);
+    BCOPY(request->v6.duid, interface_id__option.duid, request->v6.duid_len); 
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//interface id
     opts->type = htons(DHCPV6_OPT_INTERFACE_ID);
-    opts->len = htons(sizeof(struct interface_id_t));
-    BCOPY(&interfaceid, opts->data, sizeof(struct interface_id_t));
-    opts_offset += sizeof(struct interface_id_t) + sizeof(struct dhcpv6_option);
+    opts->len = htons(6+request->v6.duid_len);
+    BCOPY(&interface_id__option, opts->data, request->v6.duid_len+6);
+    opts_offset +=((request->v6.duid_len+6) + sizeof(struct dhcpv6_option));
+
     //DHCP报文封装[REMOTE ID]
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//remote id
     opts->type = htons(DHCPV6_OPT_REMOTE_ID);
@@ -285,17 +293,7 @@ PUBLIC int relay6_send_reply_packet(packet_process_t *packet_process)
     BCOPY(request->relay_payload, payload, request->relay_payload_len);
     length += request->relay_payload_len;
 
-    struct interface_id_option interface_id__option;
-    interface_id__option.type=htons(18);
-    interface_id__option.len=htons(12);
-    interface_id__option.port_index=htons(DHCPV6_CLIENT_PORT);
-    if(packet_process->dpi.vlanid[0])
-        interface_id__option.vlan_id=htons(packet_process->dpi.vlanid[0]);
-    if(packet_process->dpi.vlanid[1])
-        interface_id__option.second_id=htons(packet_process->dpi.vlanid[1]);
-    BCOPY(request->v6.duid, interface_id__option.duid, request->v6.duid_len);
-    BCOPY(&interface_id__option, payload,10+request->v6.duid_len );
-    length+=(10+request->v6.duid_len);
+ 
 
 
     //封装UDP Header
