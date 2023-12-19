@@ -3,6 +3,7 @@
 #include "dhcpd/dhcpv6.h"
 #include "share/defines.h"
 #include <netinet/in.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 PRIVATE receive_bucket_t *receive_bucket = NULL;
@@ -57,7 +58,7 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
         if (!packet_process.dhcpd_server)
             continue;//DHCP服务查找失败
 
-        struct interface_id_t interfaceid = {.ovlan=htonl(packet_process.dpi.vlanid[0]),.ivlan=htonl(packet_process.dpi.vlanid[1])};
+        struct interface_id_t interfaceid = {.ovlan=htons(packet_process.dpi.vlanid[0]),.ivlan=htons(packet_process.dpi.vlanid[1])};
         char version[4]=DHCPV6_RELAY_VERSION;
         BCOPY(version, interfaceid.version, sizeof(interfaceid.version));
         BCOPY(&packet_process.macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
@@ -198,7 +199,7 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
     opts_offset += request->payload_len + sizeof(struct dhcpv6_option);
 
     //DHCP报文封装[INTERFACE ID]
-    struct interface_id_t interfaceid = {.ovlan=htonl(packet_process->dpi.vlanid[0]),.ivlan=htonl(packet_process->dpi.vlanid[1])};
+    struct interface_id_t interfaceid = {.ovlan=htons(packet_process->dpi.vlanid[0]),.ivlan=htons(packet_process->dpi.vlanid[1])}; 
     BCOPY(DHCPV6_RELAY_VERSION, interfaceid.version, sizeof(interfaceid.version));
     BCOPY(&packet_process->macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//interface id

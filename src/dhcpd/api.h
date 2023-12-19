@@ -3,7 +3,7 @@
 
 #include "share/defines.h"
 #include "share/types.h"
-#include "share/array/trashqueue.h"
+ 
 
 #define IPCAPI_PROCESS_FINGER 1
 

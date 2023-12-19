@@ -2,6 +2,7 @@
 #define _dhcp_acl_h
 
 #include "share/defines.h"
+#include "share/rbtree/key_elem.h"
 #include "share/types.h"
 #include "share/array/trashqueue.h"
 

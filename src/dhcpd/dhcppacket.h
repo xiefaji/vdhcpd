@@ -13,8 +13,8 @@
 
 struct interface_id_t {
     u8  version[4];
-    u32 ovlan;
-    u32 ivlan;
+    u16 ovlan;
+    u16 ivlan;
     mac_address_t mac_addr; 
 } __attribute__((packed));
 
