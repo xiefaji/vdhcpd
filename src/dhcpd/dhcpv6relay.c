@@ -57,13 +57,7 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
         dhcpd_server = packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.realtime_info->lineid);
         if (!packet_process.dhcpd_server)
             continue;//DHCP服务查找失败
-
-        struct interface_id_t interfaceid = {.ovlan=htons(packet_process.dpi.vlanid[0]),.ivlan=htons(packet_process.dpi.vlanid[1])};
-        char version[4]=DHCPV6_RELAY_VERSION;
-        BCOPY(version, interfaceid.version, sizeof(interfaceid.version));
-        BCOPY(&packet_process.macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
-        if (BCMP(&interfaceid, &packet_process.request.v6.interfaceid, sizeof(struct interface_id_t)))//只判断 ivlan,ovlan和mac
-            continue;//INTERFACEID不匹配
+ 
 
         //报文响应
         relay6_send_reply_packet(&packet_process);
