@@ -111,7 +111,7 @@ ALWAYS_INLINE struct vdhcpd_assignment *alloc_assignment(dhcpd_server_stats_t *s
 ALWAYS_INLINE void free_assignment(void *p)
 {
     struct vdhcpd_assignment *a = (struct vdhcpd_assignment *)p;
-    if (a) {
+    if (a) { 
         dhcpd_server_stats_lock(a->server_stats);
         list_del(&a->head);
         dhcpd_server_stats_unlock(a->server_stats);

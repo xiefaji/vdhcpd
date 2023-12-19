@@ -2,8 +2,21 @@
 #include "dhcpd.h"
 #include "share/defines.h"
 #include <netinet/in.h>
+#include <stdbool.h>
 
 PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_packet_t *packet, const struct sockaddr_in6 dest);
+PRIVATE int ip6_addr_equal(ip6_address_t a,ip6_address_t b){
+    for (int i=0; i < 15; i++)
+    {
+        if (a.ip_u8[i]==b.ip_u8[i])
+            continue;
+        else if(a.ip_u8[i]<b.ip_u8[i])  
+            return -1;
+        else
+            return 1;
+    } 
+    return 0;
+}
 PRIVATE ip6_address_t IPV6_HTONLLL(ip6_address_t address){
     for(int i=0;i<4;i++){
         address.ip_u32[i]=htonl(address.ip_u32[i]);
@@ -190,12 +203,13 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
     //    if(assigned)
     //        return true;
     //如果分配信息中有预配置的IP地址（静态租约）
-    if ((BCMP(&start, &raddr, sizeof(ip6_address_t))) &&
-            BCMP(&end, &raddr, sizeof(ip6_address_t)) &&
-            (!find_assignment_by_ipaddr(packet_process, *raddr))&&(!IPv6_ZERO(raddr))) {
-        assigned = dhcpv6_insert_assignment(packet_process, a, *raddr);
-        if (assigned)
-            return true;
+    if((ip6_addr_equal(start, *raddr)==1)&&(ip6_addr_equal(end, *raddr)==-1)){
+        if(find_assignment_by_ipaddr(packet_process, *raddr)){
+                return true;
+        }else{
+            if(dhcpv6_insert_assignment(packet_process, a, *raddr))
+                BCOPY(&start, &a->ipaddr6, sizeof(ip6_address_t));
+        }
     }
     //生成新地址
     for (int count=0;count<100;count++) {

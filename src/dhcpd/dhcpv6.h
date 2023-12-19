@@ -54,6 +54,7 @@ enum dhcpv6_msg {
 #define DHCPV6_OPT_SNTP_SERVERS 31
 #define DHCPV6_OPT_LIFETIME 32
 #define DHCPV6_OPT_REMOTE_ID 37
+#define DHCPV6_OPT_SUBSCRIBER_ID 38
 #define DHCPV6_OPT_FQDN 39
 #define DHCPV6_OPT_NTP_SERVERS 56
 #define DHCPV6_OPT_SOL_MAX_RT 82
@@ -168,13 +169,7 @@ struct domian_search_list {
    u8 list_entry[12];
 };
 
-struct interface_id_option{
  
-    u16 port_index;
-    u16 vlan_id;
-    u16 second_id;
-    u8 duid[MAXNAMELEN+1];
-} __attribute__((packed));
 #define dhcpv6_for_each_option(start, end, otype, olen, odata)\
     for (u8 *_o = (u8 *)(start); _o + 4 <= (end) &&\
     ((otype) = _o[0] << 8 | _o[1]) && ((odata) = (void *)&_o[4]) &&\

@@ -1,7 +1,9 @@
 #include "dhcpd.h"
+#include "dhcpd/dhcppacket.h"
 #include "dhcpd/dhcpv6.h"
 #include "share/defines.h"
 #include <netinet/in.h>
+#include <stdlib.h>
 
 PRIVATE receive_bucket_t *receive_bucket = NULL;
 
@@ -55,8 +57,9 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
         if (!packet_process.dhcpd_server)
             continue;//DHCP服务查找失败
 
-        struct interface_id_t interfaceid = {.driveid = htons(dhcpd_server->iface.driveid), .lineid = htons(dhcpd_server->nLineID), .serverid = htonl(dhcpd_server->nID)};
-        if (BCMP(&interfaceid, &packet_process.request.v6.interfaceid, sizeof(struct interface_id_t)))
+        struct interface_id_t interfaceid = {.ovlan=htonl(packet_process.dpi.vlanid[0]),.ivlan=htonl(packet_process.dpi.vlanid[1])};
+        BCOPY(&packet_process.macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
+        if (BCMP(&interfaceid, &packet_process.request.v6.interfaceid, sizeof(struct interface_id_t)))//只判断 ivlan,ovlan和mac
             continue;//INTERFACEID不匹配
 
         //报文响应
@@ -138,8 +141,8 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
             request->relay_payload_len = olen;
         } break;
         case DHCPV6_OPT_INTERFACE_ID: {
-            if (olen == sizeof(struct interface_id_t))
-                BCOPY(odata, &request->v6.interfaceid, sizeof(struct interface_id_t));
+            request->v6.interfaceid_len=olen;
+            BCOPY(odata, &request->v6.interfaceid, sizeof(struct interface_id_t));
         } break;
         default:
             break;
@@ -193,25 +196,14 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
     opts_offset += request->payload_len + sizeof(struct dhcpv6_option);
 
     //DHCP报文封装[INTERFACE ID]
-    struct interface_id_option interface_id__option; 
-    interface_id__option.port_index=htons(DHCPV6_CLIENT_PORT);
-    if(packet_process->dpi.vlanid[0])
-        interface_id__option.vlan_id=htons(packet_process->dpi.vlanid[0]);
-    if(packet_process->dpi.vlanid[1])
-        interface_id__option.second_id=htons(packet_process->dpi.vlanid[1]);
-    BCOPY(packet_process->realtime_info->v6.duid, interface_id__option.duid, packet_process->realtime_info->v6.duid_len); 
+    struct interface_id_t interfaceid = {.ovlan=htonl(packet_process->dpi.vlanid[0]),.ivlan=htonl(packet_process->dpi.vlanid[1])};
+    BCOPY(&packet_process->macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//interface id
     opts->type = htons(DHCPV6_OPT_INTERFACE_ID);
-    opts->len = htons(6+packet_process->realtime_info->v6.duid_len);
-    BCOPY(&interface_id__option, opts->data, packet_process->realtime_info->v6.duid_len+6);
-    opts_offset +=((packet_process->realtime_info->v6.duid_len+6) + sizeof(struct dhcpv6_option));
+    opts->len = htons(sizeof(struct interface_id_t));
+    BCOPY(&interfaceid, opts->data, sizeof(struct interface_id_t));
+    opts_offset += sizeof(struct interface_id_t) + sizeof(struct dhcpv6_option);
 
-    //DHCP报文封装[REMOTE ID]
-    opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//remote id
-    opts->type = htons(DHCPV6_OPT_REMOTE_ID);
-    opts->len = htons(strlen(PACKAGE_NAME));
-    BCOPY(PACKAGE_NAME, opts->data, strlen(PACKAGE_NAME));
-    opts_offset += strlen(PACKAGE_NAME) + sizeof(struct dhcpv6_option);
     length += opts_offset;
 
     //封装UDP Header

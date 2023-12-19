@@ -12,9 +12,15 @@
 #include "share/types.h"
 
 struct interface_id_t {
-    u16 driveid;
-    u16 lineid;
-    u32 serverid;
+    u32 ovlan;
+    u32 ivlan;
+    mac_address_t mac_addr; 
+} __attribute__((packed));
+
+struct remote_id_t {
+    u32 enterprise_number; 
+    u16 ovlan;
+    u16 ivlan;
 } __attribute__((packed));
 
 typedef struct {
@@ -39,6 +45,7 @@ typedef struct {
         struct {
             enum dhcpv6_msg msgcode;
             struct interface_id_t interfaceid;
+            u16 interfaceid_len;
             ip6_address_t reqaddr;//客户端请求的固定IP地址
             ip6_address_t ipaddr;//分配给客户端的IP地址
             u32 leasetime;//客户端请求的租约时长
