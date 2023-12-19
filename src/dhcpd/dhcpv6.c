@@ -116,8 +116,8 @@ PRIVATE void generate_ia_pd(struct opt_ia_hdr *ia_hdr, ip6_address_t *addr, pack
     ia_prefix->len = htons(sizeof(struct opt_ia_prefix) - 4);
     ia_prefix->preferred = htonl(leasetime * 1.5);
     ia_prefix->valid = htonl(leasetime * 10);
-    ia_prefix->prefix = dhcpd_server->dhcpv6.prefix;
-    BCOPY(addr, &ia_prefix->addr, sizeof(ip6_address_t));
+    ia_prefix->prefix =(dhcpd_server->dhcpv6.prefix) ;
+    BCOPY(&dhcpd_server->dhcpv6.prefix_addr, &ia_prefix->addr, sizeof(ip6_address_t));
     generate_ia(ia_hdr, DHCPV6_OPT_IA_PD, sizeof(struct opt_ia_prefix), request->v6.iaid, leasetime);
 }
 
