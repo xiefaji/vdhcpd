@@ -58,6 +58,8 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
             continue;//DHCP服务查找失败
 
         struct interface_id_t interfaceid = {.ovlan=htonl(packet_process.dpi.vlanid[0]),.ivlan=htonl(packet_process.dpi.vlanid[1])};
+        char version[4]=DHCPV6_RELAY_VERSION;
+        BCOPY(version, interfaceid.version, sizeof(interfaceid.version));
         BCOPY(&packet_process.macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
         if (BCMP(&interfaceid, &packet_process.request.v6.interfaceid, sizeof(struct interface_id_t)))//只判断 ivlan,ovlan和mac
             continue;//INTERFACEID不匹配
@@ -197,6 +199,7 @@ PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
 
     //DHCP报文封装[INTERFACE ID]
     struct interface_id_t interfaceid = {.ovlan=htonl(packet_process->dpi.vlanid[0]),.ivlan=htonl(packet_process->dpi.vlanid[1])};
+    BCOPY(DHCPV6_RELAY_VERSION, interfaceid.version, sizeof(interfaceid.version));
     BCOPY(&packet_process->macaddr, &interfaceid.mac_addr, sizeof(mac_address_t));
     opts = (struct dhcpv6_option *)&buffer[offset + opts_offset];//interface id
     opts->type = htons(DHCPV6_OPT_INTERFACE_ID);

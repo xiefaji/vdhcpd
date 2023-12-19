@@ -12,6 +12,7 @@
 #include "share/types.h"
 
 struct interface_id_t {
+    u8  version[4];
     u32 ovlan;
     u32 ivlan;
     mac_address_t mac_addr; 
