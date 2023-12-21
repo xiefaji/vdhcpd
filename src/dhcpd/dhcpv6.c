@@ -1,12 +1,14 @@
 #include "dhcpd/dhcpv6.h"
 #include "dhcpd.h"
+#include "dhcpd/realtime.h"
 #include "share/defines.h"
 #include <netinet/in.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_packet_t *packet, const struct sockaddr_in6 dest);
 PRIVATE int ip6_addr_equal(ip6_address_t a,ip6_address_t b){
-    for (int i=0; i < 15; i++)
+    for (int i=0; i < 16; i++)
     {
         if (a.ip_u8[i]==b.ip_u8[i])
             continue;
@@ -190,8 +192,6 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
     ip6_address_t end;
     BCOPY(&dhcpd_server->dhcpv6.startip, &start, sizeof(ip6_address_t));
     BCOPY(&dhcpd_server->dhcpv6.endip, &end, sizeof(ip6_address_t));
-    //start=IPV6_HTONLLL(start);
-    end=IPV6_HTONLLL(end);
     bool assigned;
 
     if (!IPv6_ZERO(&a->ipaddr6)) {
@@ -203,7 +203,7 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
     //    if(assigned)
     //        return true;
     //如果分配信息中有预配置的IP地址（静态租约）
-    if((ip6_addr_equal(start, *raddr)==1)&&(ip6_addr_equal(end, *raddr)==-1)){
+    if((ip6_addr_equal(start, *raddr)<=0)&&(ip6_addr_equal(end, *raddr)>=0)){
         if(find_assignment_by_ipaddr(packet_process, *raddr)){
                 return true;
         }else{
@@ -220,18 +220,16 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
             if (start.ip_u8[i] == end.ip_u8[i])
                 continue;
             else if (start.ip_u8[i] < end.ip_u8[i]) {
-                uint8_t u8_random_data = (uint8_t)(rand() % (end.ip_u8[i] - start.ip_u8[i]));
-                new_add.ip_u8[i] += u8_random_data;
-                for (int j = 1; i + j < 16; j++) {
-                    u8_random_data = (uint8_t)(rand() % (255 - start.ip_u8[i + j]));
-                    start.ip_u8[i + j] += u8_random_data;
+                for (int j = i;  j < 16; j++) { 
+                    uint8_t u8_random_data = (uint8_t)(random()%(end.ip_u8[j] - start.ip_u8[j]));
+                    new_add.ip_u8[j] +=u8_random_data;
                 }
                 break;
             }
         }
-        assigned = dhcpv6_insert_assignment(packet_process, a, start);
+        assigned = dhcpv6_insert_assignment(packet_process, a, new_add);
         if (assigned) {
-            BCOPY(&start, &a->ipaddr6, sizeof(ip6_address_t));
+            BCOPY(&new_add, &a->ipaddr6, sizeof(ip6_address_t));
             return true;
         }
     }
@@ -259,8 +257,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv6_lease(packet_process_t *packet_process,
             msgcode == DHCPV6_MSG_DECLINE) {
         a->leasetime = 0;
         BCOPY(&request->v6.reqaddr, &a->ipaddr6, sizeof(ip6_address_t));
-    }
-    if (msgcode == DHCPV6_MSG_SOLICIT) {
+    }else{
         a->leasetime = dhcpd_server->leasetime;
         if (IPv6_ZERO(&a->ipaddr6))
             dhcpv6_assign(packet_process, a, &request->v6.reqaddr);
