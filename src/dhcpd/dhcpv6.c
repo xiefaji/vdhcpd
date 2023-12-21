@@ -246,13 +246,19 @@ PRIVATE struct vdhcpd_assignment *dhcpv6_lease(packet_process_t *packet_process,
     dhcpd_staticlease_t *staticlease = dhcpd_server_staticlease_search_macaddr(dhcpd_server, packet_process->macaddr, 6);
     time_t now = vdhcpd_time();
     // 主要是配置三个东西:ip,mac,租约
+    
     if (!a) {
         a = alloc_assignment(dhcpd_server->server_stats, 0);
         assert(a);
         BZERO(a, sizeof(struct vdhcpd_assignment));
     }
     BCOPY(&packet_process->macaddr, &a->macaddr, sizeof(mac_address_t));
-
+ 
+    if (staticlease && a && BCMP(&staticlease->u.v6.ipaddr, &request->v6.reqaddr, sizeof(ip4_address_t))) {
+        packet_process->realtime_info->flags=1;
+    }else{
+        packet_process->realtime_info->flags=0;
+    }
     if (staticlease || msgcode == DHCPV6_MSG_RELEASE ||
             msgcode == DHCPV6_MSG_DECLINE) {
         a->leasetime = 0;
@@ -338,7 +344,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     default:
         break;
     }
-
+ 
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_CLIENTID, realtime_info->v6.duid_len, realtime_info->v6.duid);
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_SERVERID, sizeof(server_duid), server_duid);
     if (realtime_info->v6.ia_pd) dhcpv6_put(&rep, &cookie, ntohs(ia_pd.type), ntohs(ia_pd.len), ((u8 *)&ia_pd) + 4);
@@ -361,8 +367,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
         BCOPY(&a->ipaddr6, &realtime_info->v6.ipaddr, sizeof(ip6_address_t));
         realtime_info->v6.leasetime = a->leasetime;
     }
-    SET_COUNTER(realtime_info->updatetick);
-    realtime_info->flags |= RLTINFO_FLAGS_SERVER6;
+    SET_COUNTER(realtime_info->updatetick); 
     if (realtime_info->v6.hostname_len == 0) {
         char hostname[MAXNAMELEN + 1] = "UNKNOW"; // 12
         BCOPY(&hostname, &realtime_info->v6.hostname, 6);
