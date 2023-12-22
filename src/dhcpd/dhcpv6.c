@@ -1,5 +1,6 @@
 #include "dhcpd/dhcpv6.h"
 #include "dhcpd.h"
+#include "dhcpd/dhcpstats.h"
 #include "dhcpd/realtime.h"
 #include "share/defines.h"
 #include <netinet/in.h>
@@ -67,7 +68,14 @@ PUBLIC void dhcpv6_put(struct dhcpv6_client_header *msg, u8 **cookie, u16 type, 
     BCOPY(data, o->data, len);
     *cookie += total_len;
 }
-
+PUBLIC bool ipv6_empty(ip6_address_t a){
+    for (int i=0; i < 16; i++)
+    {
+        if (a.ip_u8[i]!=0)
+            return  false;
+    }
+    return true;
+}
 PRIVATE void generate_duid(u8 duid[], u8 mac[])
 {
     time_t timestamp_value = vdhcpd_time();
@@ -149,7 +157,7 @@ PRIVATE struct vdhcpd_assignment *find_assignment_by_ipaddr(packet_process_t *pa
     return NULL;
 }
 
-PRIVATE bool dhcpv6_insert_assignment(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip6_address_t addr/*netbit*/)
+PRIVATE bool dhcpv6_insert_assignment(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip6_address_t addr6/*netbit*/)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcpd_server_stats_t *server_stats = dhcpd_server->server_stats;
@@ -158,18 +166,18 @@ PRIVATE bool dhcpv6_insert_assignment(packet_process_t *packet_process, struct v
     //c只是提供一个能够遍历的指针,存储虚拟 DHCP 分配的 IP 地址和配置信息的数据结构。
 
     // 检查是否有静态分配的 IP 地址与 MAC 地址匹配
-    dhcpd_staticlease_t *staticlease = staticlease_search6_ipaddr(dhcpd_server->staticlease_main, addr);
+    dhcpd_staticlease_t *staticlease = staticlease_search6_ipaddr(dhcpd_server->staticlease_main, addr6);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;
 
     // 遍历已分配的列表，检查是否已有其他节点分配相同的 IP 地址
     //ist_for_each_entry(pos, head, member)
     list_for_each_entry(c, &server_stats->dhcpv6_assignments, head) {
-        if (BCMP(&c->addr6, &addr, sizeof(ip6_address_t))==0)
+        if (BCMP(&c->addr6, &addr6, sizeof(ip6_address_t))==0)
             return false;//IP已被分配
     }
     /* Insert new node before c (might match list head) */
-    BCOPY(&addr, &a->addr6, sizeof(ip6_address_t));
+    BCOPY(&addr6, &a->addr6, sizeof(ip6_address_t));
     dhcpd_server_stats_lock(server_stats);// 锁定服务器统计信息以进行插入操作
     list_add_tail(&a->head, &c->head);// 将新节点插入到分配列表的末尾 (new ,try-add)
     dhcpd_server_stats_unlock(server_stats);// 解锁服务器统计信息
@@ -194,22 +202,18 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
     BCOPY(&dhcpd_server->dhcpv6.endip, &end, sizeof(ip6_address_t));
     bool assigned;
 
-    if (!IPv6_ZERO(&a->ipaddr6)) {
-        assigned = dhcpv6_insert_assignment(packet_process, a, *raddr);/*静态租约*/
-        if (assigned)
-            return assigned;
-    }
-    //    assigned = dhcpv6_insert_assignment(packet_process, a, *raddr);
-    //    if(assigned)
-    //        return true;
-    //如果分配信息中有预配置的IP地址（静态租约）
-    if((ip6_addr_equal(start, *raddr)<=0)&&(ip6_addr_equal(end, *raddr)>=0)){
-        if(find_assignment_by_ipaddr(packet_process, *raddr)){
+    if((ip6_addr_equal(start, *raddr)==-1)&&(ip6_addr_equal(end, *raddr)==1)){
+        struct vdhcpd_assignment *try_assign=find_assignment_by_ipaddr(packet_process, *raddr);
+        if((!try_assign)|| (!BCMP(&try_assign->macaddr, &a->macaddr, sizeof(mac_address_t)))){
+            if(dhcpv6_insert_assignment(packet_process, a, *raddr)){
+                BCOPY(raddr, &a->addr6, sizeof(ip6_address_t));
                 return true;
+            } 
         }else{
-            if(dhcpv6_insert_assignment(packet_process, a, *raddr))
-                BCOPY(&start, &a->ipaddr6, sizeof(ip6_address_t));
+            BCOPY(raddr, &a->addr6, sizeof(ip6_address_t));
+            return true;
         }
+
     }
     //生成新地址
     for (int count=0;count<100;count++) {
@@ -229,7 +233,7 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
         }
         assigned = dhcpv6_insert_assignment(packet_process, a, new_add);
         if (assigned) {
-            BCOPY(&new_add, &a->ipaddr6, sizeof(ip6_address_t));
+            BCOPY(&new_add, &a->addr6, sizeof(ip6_address_t));
             return true;
         }
     }
@@ -255,17 +259,15 @@ PRIVATE struct vdhcpd_assignment *dhcpv6_lease(packet_process_t *packet_process,
     BCOPY(&packet_process->macaddr, &a->macaddr, sizeof(mac_address_t));
  
     if (staticlease && a && BCMP(&staticlease->u.v6.ipaddr, &request->v6.reqaddr, sizeof(ip4_address_t))) {
-        packet_process->realtime_info->flags=1;
-    }else{
-        packet_process->realtime_info->flags=0;
-    }
+        packet_process->realtime_info->flags |=RLTINFO_FLAGS_STATIC6;
+    } 
     if (staticlease || msgcode == DHCPV6_MSG_RELEASE ||
             msgcode == DHCPV6_MSG_DECLINE) {
         a->leasetime = 0;
         BCOPY(&request->v6.reqaddr, &a->ipaddr6, sizeof(ip6_address_t));
     }else{
         a->leasetime = dhcpd_server->leasetime;
-        if (IPv6_ZERO(&a->ipaddr6))
+        if(ipv6_empty(a->addr6))
             dhcpv6_assign(packet_process, a, &request->v6.reqaddr);
     }
     return a;
@@ -295,7 +297,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
 
     if (reqmsg != DHCPV6_MSG_INFORMATION_REQUEST) {
         a = dhcpv6_lease(packet_process, reqmsg);
-        if (a) BCOPY(&a->ipaddr6, &addr6, sizeof(ip6_address_t));
+        if (a) BCOPY(&a->addr6, &addr6, sizeof(ip6_address_t));
     }
 
     struct opt_ia_hdr ia_na;
@@ -364,7 +366,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
         dhcpv6_put(&rep, &cookie, DHCPV6_OPT_LIFETIME, 4,& a->leasetime);
 
     if (a) {
-        BCOPY(&a->ipaddr6, &realtime_info->v6.ipaddr, sizeof(ip6_address_t));
+        BCOPY(&a->addr6, &realtime_info->v6.ipaddr, sizeof(ip6_address_t));
         realtime_info->v6.leasetime = a->leasetime;
     }
     SET_COUNTER(realtime_info->updatetick); 

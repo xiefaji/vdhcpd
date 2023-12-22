@@ -1,5 +1,6 @@
 #include <resolv.h>
 #include "dhcpd.h"
+#include "share/defines.h"
 
 PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_packet_t *packet, const struct sockaddr_in dest);
 
@@ -120,17 +121,17 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
 
     /* try to assign the IP the client asked for */
     if (start <= IPV4_NTOHL(raddr) && IPV4_NTOHL(raddr) <= end ) {
-        if(find_assignment_by_ipaddr(packet_process, raddr)){
-            a->addr=raddr;
-            return true;
-            }
-        else{
+        struct vdhcpd_assignment *try_assigin=find_assignment_by_ipaddr(packet_process, raddr);
+         if( (!try_assigin)|| BCMP(&try_assigin->macaddr, &a->macaddr, sizeof(mac_address_t))){
             assigned = dhcpv4_insert_assignment(packet_process, a, raddr);/*固定IP地址*/
-             if (assigned) { 
+            if (assigned) { 
                 x_log_debug("接入服务[分配地址]: 固定IP地址 "IPV4FMT".", IPV4BYTES(a->addr));
                 return true;
-                }
-        }
+                }            
+         }else{
+            a->addr=raddr;
+            return true;
+         }  
     }
 
 
