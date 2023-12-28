@@ -7,16 +7,15 @@ project(vdhcpd)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LC)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UP)
 
-if (${CMAKE_BUILD_TYPE_LC} MATCHES "release")
-    add_compile_options(-O3 -fstack-protector -fno-common)
-    add_compile_definitions(_FORTIFY_SOURCE=2)
-elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "debug")
-    add_compile_options(-g -O0 -fstack-protector -fno-common)
-
-elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "gcov")
-    add_compile_options(-g -O0 -fprofile-arcs -ftest-coverage)
-    link_libraries(gcvo)
-endif()
+# if (${CMAKE_BUILD_TYPE_LC} MATCHES "release")
+#     add_compile_options(-O3 -fstack-protector -fno-common)
+#     add_compile_definitions(_FORTIFY_SOURCE=2)
+# elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "debug")
+#     add_compile_options(-g -O0 -fstack-protector -fno-common)
+# elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "gcov")
+#     add_compile_options(-g -O0 -fprofile-arcs -ftest-coverage)
+#     link_libraries(gcvo)
+# endif()
 
 option(ENABLE_SANITIZE_ADDR "Enable Address Sanitizer" OFF)
 set(SANITIZE_ADDR_OPTIONS
@@ -45,7 +44,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # 添加宏定义
 add_definitions(-D_GNU_SOURCE)
 add_definitions(-DVERSION_VNAAS)
-add_definitions(-DCHECK_PERFORMANCE)
+add_definitions(-DDEBUG)
+
+# add_definitions(-DCHECK_PERFORMANCE)
 
 # 添加项目的头文件目录
 include_directories(src)

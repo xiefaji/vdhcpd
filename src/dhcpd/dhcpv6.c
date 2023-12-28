@@ -20,18 +20,7 @@ PRIVATE int ip6_addr_equal(ip6_address_t a,ip6_address_t b){
     } 
     return 0;
 }
-PRIVATE ip6_address_t IPV6_HTONLLL(ip6_address_t address){
-    for(int i=0;i<4;i++){
-        address.ip_u32[i]=htonl(address.ip_u32[i]);
-    }
-    return address;
-}
-PRIVATE ip6_address_t IPV6_NTOHLLL(ip6_address_t address){
-    for(int i=0;i<4;i++){
-        address.ip_u32[i]=htonl(address.ip_u32[i]);
-    }
-    return address;
-}
+
 PUBLIC char *dhcpv6_msg_to_string(u8 reqmsg)
 {
     switch (reqmsg) {
@@ -216,7 +205,7 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
 
     }
     //生成新地址
-    for (int count=0;count<100;count++) {
+    for (int count=0;count<1000;count++) {
         srand(time(NULL));
         ip6_address_t new_add;
         BCOPY(&start, &new_add, sizeof(ip6_address_t));
@@ -375,10 +364,10 @@ PUBLIC int server6_process(packet_process_t *packet_process)
         BCOPY(&hostname, &realtime_info->v6.hostname, 6);
         realtime_info->v6.hostname_len = 6;
     }
+    if(reqmsg==DHCPV6_MSG_REQUEST)
     __sync_fetch_and_add(&realtime_info->update_db6, 1);
 
-    if (a && (reply->v6.msgcode == DHCPV6_MSG_RECONFIGURE || reqmsg == DHCPV6_MSG_RELEASE || reqmsg == DHCPV6_MSG_DECLINE))
-        free_assignment(a);
+
 
     struct sockaddr_in6 dest;
     dest.sin6_family = AF_INET6;

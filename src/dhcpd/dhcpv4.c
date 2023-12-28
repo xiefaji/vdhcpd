@@ -1,6 +1,7 @@
 #include <resolv.h>
 #include "dhcpd.h"
 #include "share/defines.h"
+#include "share/xlog.h"
 
 PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_packet_t *packet, const struct sockaddr_in dest);
 
@@ -151,7 +152,9 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
 
         assigned = dhcpv4_insert_assignment(packet_process, a, n_try);/*动态IP*/
         if (assigned) {
-            x_log_debug("接入服务[分配地址]: 动态IP地址 "IPV4FMT" (try %u of %u).", IPV4BYTES(a->addr), i + 1, count);
+            #ifdef DEBUG
+            x_log_warn("接入服务[分配地址]: 动态IP地址 "IPV4FMT" (try %u of %u).", IPV4BYTES(a->addr), i + 1, count);
+            #endif // DEBUG 
             return true;
         }
     }
@@ -181,6 +184,10 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     //    }
 
     if (msgcode == DHCPV4_MSG_DISCOVER || msgcode == DHCPV4_MSG_REQUEST) {//租约申请/续租
+    #ifdef DEBUG
+    x_log_warn("DISCOVER || REQUEST MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
+    #endif // DEBUG 
+
         bool assigned = !!a;
 
         if (!a) {
@@ -205,12 +212,21 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 }
 
                 assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
+                #ifdef DEBUG
+                                if(!assigned){
+                    x_log_warn(" 未分配到ip");
+                }
+                #endif // DEBUG
+ 
             }
         } else if ((IPv4_SUBNET(&a->addr, &dhcpd_server->dhcpv4.netmask) != IPv4_SUBNET(&dhcpd_server->dhcpv4.startip, &dhcpd_server->dhcpv4.netmask)) && !(a->flags & OAF_STATIC)) {
             //动态租约终端且与接入服务网段不匹配
             dhcpd_server_stats_lock(server_stats);
             list_del_init(&a->head);
             dhcpd_server_stats_unlock(server_stats);
+            #ifdef DEBUG
+            x_log_warn(" 子网掩码问题没有发送报文");
+            #endif // DEBUG 
             a->addr.address = INADDR_ANY;
             assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
         }
@@ -235,7 +251,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
 
                 a->valid_until = ((request->v4.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v4.leasetime));
             }
-        } else if (!assigned && a) {
+        } else if ((!assigned) && a) {
             /* Cleanup failed assignment */
             free_assignment(a);
             a = NULL;
@@ -359,6 +375,11 @@ PUBLIC int server4_process(packet_process_t *packet_process)
             else realtime_info->flags |= ~RLTINFO_FLAGS_STATIC4;
             __sync_fetch_and_add(&realtime_info->update_db4, 1);
         }
+    }else
+    {
+        #ifdef DEBUG
+        x_log_warn("分配失败:MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
+        #endif // DEBUG 
     }
 
     if (dhcpd_server->iface.mtu) {
@@ -410,6 +431,9 @@ PUBLIC int server4_process(packet_process_t *packet_process)
 
     reply->payload = &rep;
     reply->payload_len = PACKET4_SIZE(&rep, cookie);
+#ifdef DEBUG
+    x_log_warn("发送报文");
+#endif // DEBUG 
     return server4_send_reply_packet(packet_process, reply, dest);
 }
 
