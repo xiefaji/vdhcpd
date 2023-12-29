@@ -15,6 +15,7 @@ typedef enum {
     MODE_IPV6_RELAY = (1<<1),
     MODE_IPV4_SERVER = (1<<4),
     MODE_IPV6_SERVER = (1<<6),
+    MODE_IPV6_SLAAC = ((1<<8)+(1<<6)),
 } dhcpd_mode_t;
 
 //DHCP服务配置
@@ -76,7 +77,13 @@ typedef struct {
         } v6;
         char identifier[MINNAMELEN+1];//中继标识
     } dhcprelay;
-
+    struct {
+        ip6_address_t gateway;
+        u16 prefix;
+        ip6_address_t dns[2];
+        ip6_address_t prefix_addr;
+        u32 leasetime;
+    }SLAAC;
     //MAC控制
     struct {
         dhcpd_acl_t aclmode;
@@ -92,6 +99,7 @@ typedef struct {
 } dhcpd_server_t;
 #define ENABLE_IPV4_RELAY(s) ((s)->mode & MODE_IPV4_RELAY)
 #define ENABLE_IPV6_RELAY(s) ((s)->mode & MODE_IPV6_RELAY)
+#define ENABLE_IPV6_SLAAC(s) ((s)->mode & MODE_IPV6_SLAAC)
 #define ENABLE_RELAY(s) (ENABLE_IPV4_RELAY(s) || ENABLE_IPV6_RELAY(s))
 #define ENABLE_IPV4_SERVER(s) ((s)->mode & MODE_IPV4_SERVER)
 #define ENABLE_IPV6_SERVER(s) ((s)->mode & MODE_IPV6_SERVER)

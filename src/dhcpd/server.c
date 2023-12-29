@@ -192,6 +192,17 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_String(&Query, "szMacGroups", tmpbuffer, MINNAMELEN);
         ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
 #endif
+
+        //SLAAC
+        CSqlRecorDset_GetFieldValue_U16(&Query, "szSlaacPrefix", &dhcpd_server->SLAAC.prefix);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacGateWay", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.gateway);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns1", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[0]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns2", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[1]);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nSlaacLeaseTime", &dhcpd_server->SLAAC.leasetime);
+
         for (int i = 0; i < 15; i++) {
             if (i < dhcpd_server->dhcpv6.prefix / 8)
                 dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = dhcpd_server->dhcpv6.gateway.ip_u8[i];
@@ -423,6 +434,15 @@ PRIVATE void dhcpd_update_config(dhcpd_server_t *dhcpd_server)
         CSqlRecorDset_GetFieldValue_String(&Query, "szMacGroups", tmpbuffer, MINNAMELEN);
         ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
 #endif
+        //SLAAC
+        CSqlRecorDset_GetFieldValue_U16(&Query, "szSlaacPrefix", &dhcpd_server->SLAAC.prefix);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacGateWay", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.gateway);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns1", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[0]);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns2", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[1]);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "nSlaacLeaseTime", &dhcpd_server->SLAAC.leasetime);
         for (int i = 0; i < 15; i++) {
             if (i < dhcpd_server->dhcpv6.prefix / 8)
                 dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = dhcpd_server->dhcpv6.gateway.ip_u8[i];
