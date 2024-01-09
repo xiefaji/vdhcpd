@@ -1,7 +1,7 @@
 #include "dhcpd.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
-//MAC地址控制
+// MAC地址控制
 PUBLIC macaddr_item_t *macaddr_item_init()
 {
     macaddr_item_t *macaddr_item = (macaddr_item_t *)xmalloc(sizeof(macaddr_item_t));
@@ -47,26 +47,28 @@ PUBLIC void macaddr_group_recycle(void *p, trash_queue_t *pRecycleTrash)
     }
 }
 
-//MAC群组查找
+// MAC群组查找
 PUBLIC macaddr_group_t *macaddr_group_search(void *cfg, const u32 nID)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     struct key_node *knode = key_rbsearch(&cfg_main->key_macaddr_group, nID);
-    return (knode && knode->data) ? knode->data:NULL;
+    return (knode && knode->data) ? knode->data : NULL;
 }
 
 //加载MAC地址群组
 PUBLIC void macaddr_acl_reload(void *cfg)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
-    char sql[MINBUFFERLEN+1]={0};
+    char sql[MINBUFFERLEN + 1] = {0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_MACACL_GROUP);
 
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
-        return ;
-    MYSQLRECORDSET Query={0};
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
+        return;
+    }
+    MYSQLRECORDSET Query = {0};
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
@@ -92,20 +94,22 @@ PUBLIC void macaddr_acl_reload(void *cfg)
 //加载群组MAC地址
 PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
 {
-    char sql[MINBUFFERLEN+1]={0};
+    char sql[MINBUFFERLEN + 1] = {0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpmac WHERE groupid=%u;", macaddr_group->nID);
 
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
-        return ;
-    MYSQLRECORDSET Query={0};
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
+        return;
+    }
+    MYSQLRECORDSET Query = {0};
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
-        char macaddr[MINNAMELEN+1]={0};
+        char macaddr[MINNAMELEN + 1] = {0};
         macaddr_item_t *macaddr_item = macaddr_item_init();
         CSqlRecorDset_GetFieldValue_String(&Query, "mac", macaddr, MINNAMELEN);
         macaddress_parse(&macaddr_item->key.macaddr, macaddr);
@@ -113,7 +117,7 @@ PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
 
         struct key_node *knode = key_rbinsert(&macaddr_group->key_macaddrlist, macaddr_item->key.key_value, macaddr_item);
         if (knode) {
-            x_log_err("加载MAC地址失败, MAC冲突["MACADDRFMT"].", MACADDRBYTES(macaddr_item->key.macaddr));
+            x_log_err("加载MAC地址失败, MAC冲突[" MACADDRFMT "].", MACADDRBYTES(macaddr_item->key.macaddr));
             macaddr_item_release(macaddr_item);
         }
 
@@ -135,7 +139,7 @@ PUBLIC void macaddr_acl_check(void *cfg)
     }
 }
 
-//MAC地址群组匹配
+// MAC地址群组匹配
 PUBLIC int macaddr_match(void *cfg, const u32 nID, const mac_address_t macaddr)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
@@ -147,7 +151,7 @@ PUBLIC int macaddr_match(void *cfg, const u32 nID, const mac_address_t macaddr)
     BZERO(&tmp, sizeof(macaddr_item_t));
     BCOPY(&macaddr, &tmp.key.macaddr, sizeof(mac_address_t));
     struct key_node *knode = key_rbsearch(&macaddr_group->key_macaddrlist, tmp.key.key_value);
-    return (knode && knode->data) ? 1:0;
+    return (knode && knode->data) ? 1 : 0;
 }
 
 PUBLIC int macaddr_match_str(void *cfg, const u32 nID, const char *macaddr_str)
@@ -169,7 +173,7 @@ PRIVATE void macaddr_filter_reload(struct key_tree *filter_tree, const char *fil
         return;
     }
 
-    char buffer[MINNAMELEN+1]={0};
+    char buffer[MINNAMELEN + 1] = {0};
     while (fgets(buffer, MINNAMELEN, pFILE)) {
         macaddr_item_t temp_item;
         BZERO(&temp_item, sizeof(macaddr_item_t));
@@ -180,7 +184,7 @@ PRIVATE void macaddr_filter_reload(struct key_tree *filter_tree, const char *fil
         macaddr_item_t *macaddr_item = macaddr_item_init();
         macaddr_item->key.key_value = temp_item.key.key_value;
         sprintf(macaddr_item->szName, "MAC地址日志过滤");
-        struct key_node *knode  = key_rbinsert(filter_tree, macaddr_item->key.key_value, macaddr_item);
+        struct key_node *knode = key_rbinsert(filter_tree, macaddr_item->key.key_value, macaddr_item);
         if (knode) macaddr_item_release(macaddr_item);
     }
 
@@ -221,5 +225,5 @@ PUBLIC int macaddr_filter_match(struct key_tree *filter_tree, const mac_address_
     BZERO(&tmp, sizeof(macaddr_item_t));
     BCOPY(&macaddr, &tmp.key.macaddr, sizeof(mac_address_t));
     struct key_node *knode = key_rbsearch(filter_tree, tmp.key.key_value);
-    return (knode && knode->data) ? 1:0;
+    return (knode && knode->data) ? 1 : 0;
 }

@@ -143,9 +143,11 @@ PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
     dbname = "sxzinfo";
 #endif
     MYDBOP DBHandle;
-    MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, dbname) < 0)
-        return ;
+    MyDBOp_Init(&DBHandle); 
+    if (database_connect(&DBHandle, dbname) < 0) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
+        return;
+    }
     MyDBOp_ExecSQL(&DBHandle, sql);
     MyDBOp_CloseDB(&DBHandle);
 }

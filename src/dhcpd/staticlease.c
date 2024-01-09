@@ -97,8 +97,10 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
 
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
-        return ;
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
+        return;
+    }
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
@@ -138,8 +140,10 @@ PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32
 
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
-        return ;
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
+        return;
+    }
     MYSQLRECORDSET Query={0};
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
