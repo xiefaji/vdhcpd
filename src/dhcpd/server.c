@@ -1,8 +1,7 @@
 #include "dhcpd.h"
 #include "share/defines.h"
 #include "share/xlog.h"
-
-PRIVATE void dhcpd_update_config(dhcpd_server_t *dhcpd_server);
+ 
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_queue_t *pRecycleTrash);
@@ -275,8 +274,7 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     struct key_node *knode = key_first(&cfg_main->key_servers);
     while (knode && knode->data) {
-        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
-        dhcpd_update_config(dhcpd_server);
+        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data; 
         dhcpd_upate_iface(dhcpd_server); //
         dhcpd_upate_iface_lineip(dhcpd_server);
         dhcpd_upate_iface_lineip_all(dhcpd_server, pRecycleTrash);
@@ -287,177 +285,7 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
     }
 }
 
-PRIVATE void dhcpd_update_config(dhcpd_server_t *dhcpd_server)
-{
-    char sql[MINBUFFERLEN + 1] = {0};
-    snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpserver  where nid =%d;", dhcpd_server->nID);
-
-    MYDBOP DBHandle;
-    MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0)
-        return;
-    MYSQLRECORDSET Query = {0};
-    CSqlRecorDset_Init(&Query);
-    CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
-    CSqlRecorDset_CloseRec(&Query);
-    CSqlRecorDset_ExecSQL(&Query, sql);
-    if (CSqlRecorDset_GetRecordCount(&Query)) {
-        u16 val16;
-        u32 val32;
-        char tmpbuffer[MAXNAMELEN + 1] = {0}, exactvlan[MAXNAMELEN + 1] = {0};
-
-        //基础配置
-#ifndef VERSION_VNAAS
-        CSqlRecorDset_GetFieldValue_U32(&Query, "id", &dhcpd_server->nID);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_server->nLineID);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "enable", &dhcpd_server->nEnabled);
-        CSqlRecorDset_GetFieldValue_String(&Query, "exactvlan", exactvlan, MAXNAMELEN);
-        dhcpd_server->pEXACTVLAN = xEXACTVLAN_init(exactvlan, 1);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "stack", &dhcpd_server->mode);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "leasetime", &dhcpd_server->leasetime);
-#else
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nID", &dhcpd_server->nID);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nSwID", &dhcpd_server->nLineID);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nEnable", &dhcpd_server->nEnabled);
-        CSqlRecorDset_GetFieldValue_String(&Query, "exactvlan", exactvlan, MAXNAMELEN);
-        dhcpd_server->pEXACTVLAN = xEXACTVLAN_init(exactvlan, 1);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nStack", &dhcpd_server->mode);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nLeaseTime", &dhcpd_server->leasetime);
-#endif
-
-        // DHCPV4服务器配置
-#ifndef VERSION_VNAAS
-        CSqlRecorDset_GetFieldValue_U32(&Query, "ip_low", &val32);
-        dhcpd_server->dhcpv4.startip.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "ip_up", &val32);
-        dhcpd_server->dhcpv4.endip.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "gateway", &val32);
-        dhcpd_server->dhcpv4.gateway.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "mask", &val32);
-        dhcpd_server->dhcpv4.netmask.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "broadcast", &val32);
-        dhcpd_server->dhcpv4.broadcast.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "dns1", &val32);
-        dhcpd_server->dhcpv4.dns[0].address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "dns2", &val32);
-        dhcpd_server->dhcpv4.dns[1].address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "wins1", &val32);
-        dhcpd_server->dhcpv4.windns[0].address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "wins2", &val32);
-        dhcpd_server->dhcpv4.windns[1].address = htonl(val32);
-#else
-        CSqlRecorDset_GetFieldValue_String(&Query, "szIPLow", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.startip);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szIPUp", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.endip);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szGateWay", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.gateway);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szMask", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.netmask);
-        // CSqlRecorDset_GetFieldValue_U32(&Query, "broadcast", &val32);
-        // dhcpd_server->dhcpv4.broadcast.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szDns1", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.dns[0]);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szDns2", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.dns[1]);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szWins1", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.windns[0]);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szWins2", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcpv4.windns[1]);
-#endif
-
-        // DHCPV6服务器配置
-#ifndef VERSION_VNAAS
-        CSqlRecorDset_GetFieldValue_String(&Query, "ip6_low", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.startip);
-        CSqlRecorDset_GetFieldValue_String(&Query, "ip6_up", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.endip);
-        CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6gateway", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.gateway);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "prefix6", &dhcpd_server->dhcpv6.prefix);
-        CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6dns1", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[0]);
-        CSqlRecorDset_GetFieldValue_String(&Query, "dhcp6dns2", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[1]);
-#else
-        CSqlRecorDset_GetFieldValue_String(&Query, "szIP6Low", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.startip);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szIP6Up", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.endip);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szGateWay6", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.gateway);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "szPrefix", &dhcpd_server->dhcpv6.prefix);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szDns6_1", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[0]);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szDns6_2", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcpv6.dns[1]);
-#endif
-
-        // DHCP中继配置
-#ifndef VERSION_VNAAS
-        CSqlRecorDset_GetFieldValue_String(&Query, "identifier", dhcpd_server->dhcprelay.identifier, MINNAMELEN);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "subnet", &val32);
-        dhcpd_server->dhcprelay.v4.subnet.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "upstream_ip", &val32);
-        dhcpd_server->dhcprelay.v4.serverip.address = htonl(val32);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "upstream_port", &val16);
-        dhcpd_server->dhcprelay.v4.serverport = htons(val16);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "outerlineid", &dhcpd_server->dhcprelay.v4.lineid);
-        CSqlRecorDset_GetFieldValue_String(&Query, "upstream_ip_v6", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcprelay.v6.serverip);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "upstream_port_v6", &val16);
-        dhcpd_server->dhcprelay.v6.serverport = htons(val16);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "outerlineid_v6", &dhcpd_server->dhcprelay.v6.lineid);
-#else
-        // CSqlRecorDset_GetFieldValue_String(&Query, "identifier", dhcpd_server->dhcprelay.identifier, MINNAMELEN);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szSubnet", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcprelay.v4.subnet);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP4", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcprelay.v4.serverip);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "szProxySerIP4", &val16);
-        dhcpd_server->dhcprelay.v4.serverport = htons(val16);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nTxSw4ID", &dhcpd_server->dhcprelay.v4.lineid);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP4", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcprelay.v4.serverip);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "nProxySerPort6", &val16);
-        dhcpd_server->dhcprelay.v6.serverport = htons(val16);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nTxSw6ID", &dhcpd_server->dhcprelay.v6.lineid);
-#endif
-
-        // MAC控制
-#ifndef VERSION_VNAAS
-        CSqlRecorDset_GetFieldValue_U32(&Query, "aclmode", &dhcpd_server->macctl.aclmode);
-        CSqlRecorDset_GetFieldValue_String(&Query, "macgroup", tmpbuffer, MINNAMELEN);
-        ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
-#else
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nAclMode", &dhcpd_server->macctl.aclmode);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szMacGroups", tmpbuffer, MINNAMELEN);
-        ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
-#endif
-        //SLAAC
-        CSqlRecorDset_GetFieldValue_U16(&Query, "szSlaacPrefix", &dhcpd_server->SLAAC.prefix);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacGateWay", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.gateway);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns1", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[0]);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns2", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[1]);
-        CSqlRecorDset_GetFieldValue_U32(&Query, "nSlaacLeaseTime", &dhcpd_server->SLAAC.leasetime);
-        for (int i = 0; i < 15; i++) {
-            if (i < dhcpd_server->dhcpv6.prefix / 8)
-                dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = dhcpd_server->dhcpv6.gateway.ip_u8[i];
-            else
-                dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = 0;
-        }
-        #ifdef DEBUG
-        x_log_debug("配置更新完毕");
-        #endif // DEBUG
-    }
-
-    CSqlRecorDset_CloseRec(&Query);
-    CSqlRecorDset_Destroy(&Query);
-    MyDBOp_CloseDB(&DBHandle);
-}
+ 
 
 //读取线路配置
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
