@@ -55,7 +55,8 @@ PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct v
 
     u32 h_addr = IPV4_NTOHL(addr);
     struct vdhcpd_assignment *c;
-
+    if(h_addr==dhcpd_server->dhcpv4.gateway.address)
+        return false; //分配网关则返回
     dhcpd_staticlease_t *staticlease = staticlease_search4_ipaddr(dhcpd_server->staticlease_main, addr);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;

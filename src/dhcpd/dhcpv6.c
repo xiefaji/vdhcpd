@@ -161,7 +161,8 @@ PRIVATE bool dhcpv6_insert_assignment(packet_process_t *packet_process, struct v
     dhcpd_staticlease_t *staticlease = staticlease_search6_ipaddr(dhcpd_server->staticlease_main, addr6);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;
-
+    if(!BCMP(&addr6, &dhcpd_server->dhcpv6.gateway , sizeof(ip6_address_t)))
+        return false;
     // 遍历已分配的列表，检查是否已有其他节点分配相同的 IP 地址
     // ist_for_each_entry(pos, head, member)
     list_for_each_entry(c, &server_stats->dhcpv6_assignments, head)
