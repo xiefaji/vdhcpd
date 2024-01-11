@@ -7,6 +7,7 @@
 //默认配置路径
 #define PATH_LOGFILE  "/var/log/vdhcpd.log"
 #define PATH_FINGERFILE "/opt/dhcpd.finger"
+
 #ifndef VERSION_VNAAS
 #define PATH_CONFILE  "/xspeeder/vdhcpd.conf"
 #define PATH_FILTERFILE "/xspeeder/dhcpd.filter"
