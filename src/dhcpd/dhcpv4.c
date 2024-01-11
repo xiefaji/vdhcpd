@@ -173,7 +173,8 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     time_t now = vdhcpd_time();
 
     if (staticlease && a && BCMP(&staticlease->u.v4.ipaddr, &a->ipaddr, sizeof(ip4_address_t))) {
-        free_assignment(a);
+        x_log_warn("静态租约释放租约变量");
+        free_assignment(a); 
         a = NULL;
     }
 
@@ -213,8 +214,10 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
 
                 assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
                 #ifdef DEBUG
-                                if(!assigned){
+                if(!assigned){
                     x_log_warn(" 未分配到ip");
+                }else{
+                    x_log_warn(" 分配到ip");
                 }
                 #endif // DEBUG
  
@@ -253,6 +256,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
             }
         } else if ((!assigned) && a) {
             /* Cleanup failed assignment */
+            x_log_warn("删除租约");
             free_assignment(a);
             a = NULL;
         }

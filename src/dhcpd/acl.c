@@ -74,8 +74,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
-    CSqlRecorDset_ExecSQL(&Query, sql);
-    x_log_warn("dhcp服务数:%d\n",CSqlRecorDset_GetRecordCount(&Query));
+    CSqlRecorDset_ExecSQL(&Query, sql); 
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
         macaddr_group_t *macaddr_group = macaddr_group_init();
         CSqlRecorDset_GetFieldValue_U32(&Query, "id", &macaddr_group->nID);

@@ -259,10 +259,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv6_lease(packet_process_t *packet_process,
     } else {
         a->leasetime = dhcpd_server->leasetime;
         if (ipv6_empty(a->addr6))
-            if (!dhcpv6_assign(packet_process, a, &request->v6.reqaddr)) {
-                free_assignment(a);
-                a = NULL;
-            }
+            dhcpv6_assign(packet_process, a, &request->v6.reqaddr);
     }
     return a;
 }

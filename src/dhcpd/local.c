@@ -65,6 +65,7 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
     //接收数据包并处理
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
     for (int idx = 0; idx < receive_bucket->count; ++idx) {
+        x_log_warn("接收到报文");
         packet_process_t packet_process;
         BZERO(&packet_process, sizeof(packet_process_t));
         struct mmsghdr *packets = &receive_bucket->receives.packets[idx];
@@ -74,21 +75,26 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
 
         packet_do_dpi(&packet_process);
         packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.dpi.lineid);
-        if (!packet_process.dhcpd_server)
+        if (!packet_process.dhcpd_server){
+            x_log_warn("DHCP服务查找失败");
             continue;//DHCP服务查找失败
+            }
 
         //报文基础解析
-        if (packet_parse(&packet_process) < 0)
-            continue;
+        if (packet_parse(&packet_process) < 0){
+            x_log_warn("报文基础解析失败");
+            continue;}
 
         //DHCP服务参数匹配
-        if (packet_match_server(&packet_process) < 0)
-            continue;
+        if (packet_match_server(&packet_process) < 0){
+             x_log_warn("DHCP服务参数不匹配");
+            continue;}
 
         //报文处理
         switch (packet_process.dpi.process) {
         case DEFAULT_DHCPv4_PROCESS:
             packet_process4(&packet_process, pRecycleTrash);
+            x_log_warn("DHCPv4报文处理");
             break;
         case DEFAULT_DHCPv6_PROCESS:
             packet_process6(&packet_process, pRecycleTrash);
