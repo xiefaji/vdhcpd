@@ -10,6 +10,11 @@
 #define stricmp(a,b)         strcasecmp(a,b)
 #endif
 
+uint real_connext_mutex = 0;
+#define real_mutex_unlock()  {__sync_bool_compare_and_swap(&real_connext_mutex,1,0); }
+#define real_mutex_lock()    { while (!(__sync_bool_compare_and_swap (&real_connext_mutex,0, 1) )) {sched_yield();}}
+
+
 long long atoll (const char *p)
 {
     int minus = 0;
@@ -30,17 +35,22 @@ long long atoll (const char *p)
 
 PUBLIC bool MysqlBase_OpenDB(PMYSQLBASE pDB,const char *username,const char *password,const char *dbname,const char *serverip,const unsigned short port)
 {
+    real_mutex_lock();
     pDB->m_con = mysql_init((MYSQL*) 0);
     if (!pDB->m_con) {
+        real_mutex_unlock();
         x_log_warn("%s : 数据库句柄初始化失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
         return false;
     }
 
     //mysql_options(m_con, MYSQL_OPT_CONNECT_TIMEOUT , "10");
     if (!mysql_real_connect(pDB->m_con,serverip,username,password,dbname,port,NULL,0)) {
+        mysql_thread_end();
+        real_mutex_unlock();
         x_log_warn("%s : 数据库连接失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
         return false;
     }
+    real_mutex_unlock();
     //mysql_options(m_con, MYSQL_OPT_RECONNECT, "1");
     pthread_mutex_init(&pDB->m_cs,NULL);//InitializeCriticalSection(&m_cs);
     pDB->has_init=true;
@@ -53,7 +63,10 @@ PUBLIC void MysqlBase_CloseDB(PMYSQLBASE pDB)
         mysql_close(pDB->m_con);
         pDB->m_con= NULL;
         pthread_mutex_destroy(&pDB->m_cs);
+        real_mutex_lock();
+        mysql_thread_end();
         mysql_library_end();
+        real_mutex_unlock();
     }
 }
 

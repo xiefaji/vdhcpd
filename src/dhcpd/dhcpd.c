@@ -25,7 +25,7 @@ PUBLIC int database_init()
 
 PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
 {
-    MyDBOp_Init(pDBHandle);
+    MyDBOp_Init(pDBHandle);  
     if (!MyDBOp_OpenDB(pDBHandle, cfg_mysql.user, cfg_mysql.pass, dbname, cfg_mysql.ip, cfg_mysql.port)) {
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
         return -1;
@@ -38,9 +38,9 @@ PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
 
 PUBLIC time_t vdhcpd_time(void)
 {
-//    struct timespec ts;
-//    clock_gettime(CLOCK_MONOTONIC, &ts);
-//    return ts.tv_sec;
+    //    struct timespec ts;
+    //    clock_gettime(CLOCK_MONOTONIC, &ts);
+    //    return ts.tv_sec;
     return global_time;
 }
 
@@ -96,7 +96,7 @@ PUBLIC int vdhcpd_release()
     vdm->sockfd_relay4 = -1;
     if (vdm->sockfd_relay6 > 0) close(vdm->sockfd_relay6);
     vdm->sockfd_relay6 = -1;
-    if (vdm->sockfd_api  > 0) close(vdm->sockfd_api);
+    if (vdm->sockfd_api > 0) close(vdm->sockfd_api);
     vdm->sockfd_api = -1;
     if (vdm->sockfd_webaction > 0) close(vdm->sockfd_webaction);
     vdm->sockfd_webaction = -1;
@@ -104,7 +104,7 @@ PUBLIC int vdhcpd_release()
     vdhcpd_cfg_release(vdm->cfg_main);
     stats_main_release(&vdm->stats_main);
     db_process_destroy(&vdm->db_process);
-    server_stats_main_release();
+    server_stats_main_release(); 
     macaddr_filter_release(vdm->filter_tree);
     vdhcpd_urandom_release();
 #ifdef VERSION_VNAAS
@@ -127,24 +127,25 @@ PUBLIC int vdhcpd_shutdown()
 
 PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
 {
-    char sql[MINBUFFERLEN+1]={0};
+    char sql[MINBUFFERLEN + 1] = {0};
     char *dbname = NULL;
 #ifndef VERSION_VNAAS
     int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbserverinfo (`server`,`ver`,`start`,`pid`) "
-                                          "VALUES ('xsdhcp','"PACKAGE_VERSION"',%u,%u) "
-                                          "ON DUPLICATE KEY UPDATE `ver`='"PACKAGE_VERSION"',`start`=%u,`pid`=%u;",
+                                          "VALUES ('xsdhcp','" PACKAGE_VERSION "',%u,%u) "
+                                          "ON DUPLICATE KEY UPDATE `ver`='" PACKAGE_VERSION "',`start`=%u,`pid`=%u;",
                        (u32)time(NULL), getpid(), (u32)time(NULL), getpid());
     dbname = cfg_mysql.dbname;
 #else
     int len = snprintf(sql, MINBUFFERLEN, "INSERT INTO tbservice_info (`szService`,`szVersion`,`dStart`,`nPid`) "
-                                          "VALUES ('vnass_dhcpd','"PACKAGE_VERSION"',now(),%u) "
-                                          "ON CONFLICT(szService) DO UPDATE SET `szVersion`='"PACKAGE_VERSION"',`dStart`=now(),`nPid`=%u;",
+                                          "VALUES ('vnass_dhcpd','" PACKAGE_VERSION "',now(),%u) "
+                                          "ON CONFLICT(szService) DO UPDATE SET `szVersion`='" PACKAGE_VERSION "',`dStart`=now(),`nPid`=%u;",
                        getpid(), getpid());
     dbname = "sxzinfo";
 #endif
     MYDBOP DBHandle;
-    MyDBOp_Init(&DBHandle); 
+    // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, dbname) < 0) {
+        MyDBOp_CloseDB(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
         return;
     }
@@ -160,7 +161,7 @@ PUBLIC int vdhcpd_start()
     vdm->cfg_main = vdhcpd_cfg_reload();
     assert(vdm->cfg_main);
 
-    x_log_warn("%s Start. version[%s] pid[%d]...", PACKAGE_NAME"["PACKAGE_MODULES"]", PACKAGE_VERSION, getpid());
+    x_log_warn("%s Start. version[%s] pid[%d]...", PACKAGE_NAME "[" PACKAGE_MODULES "]", PACKAGE_VERSION, getpid());
     vdhcpd_starttime(vdm);
 
     xthread_create(&vdm->mtThread, "Maintain", vdm, NULL, vdhcpd_maintain, NULL, 0, 0);
@@ -176,7 +177,7 @@ PUBLIC int vdhcpd_start()
 PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
-    PRIVATE u32 last_rotate,last_update;
+    PRIVATE u32 last_rotate, last_update;
     PRIVATE u32 last_modifytime;
 
     //日志文件句柄保活
@@ -185,19 +186,19 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
         SET_COUNTER(last_rotate);
     }
 
-    if (vdm->reload_vdhcpd) {//配置重载
+    if (vdm->reload_vdhcpd) { //配置重载
         __sync_fetch_and_and(&vdm->reload_vdhcpd, 0);
         vdhcpd_cfg_t *cfg_main = vdhcpd_cfg_reload();
         vdhcpd_cfg_recycle(vdm->cfg_main, pRecycleTrash);
         vdm->cfg_main = cfg_main;
-    } else if (CMP_COUNTER(last_update, 30)) {//局部参数动态更新
-         
+    } else if (CMP_COUNTER(last_update, 30)) { //局部参数动态更新
+
         dhcpd_server_update(vdm->cfg_main, pRecycleTrash);
         SET_COUNTER(last_update);
     }
 
     //通信数据过滤[MAC地址重载]
-    u32 current_modifytime=0;
+    u32 current_modifytime = 0;
     get_file_modifytime(path_cfg.filterfile, &current_modifytime);
     if (current_modifytime != last_modifytime) {
         last_modifytime = current_modifytime;
@@ -206,7 +207,7 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
         macaddr_filter_recycle(recycle_tree, pRecycleTrash);
     }
 
-    stats_main_maintain(&vdm->stats_main, pRecycleTrash);//需要控制在每秒执行
+    stats_main_maintain(&vdm->stats_main, pRecycleTrash); //需要控制在每秒执行
 
     return xTHREAD_DEFAULT_SECOND_INTERVAL;
 }
@@ -215,10 +216,14 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
-    MYDBOP DBHandle;
-    MyDBOp_Init(&DBHandle);
-    int dbsuccess = (0 == database_connect(&DBHandle, cfg_mysql.dbname)) ? 1:0;
-    u32 stattime;//确保不一直执行SQL
+    MYDBOP DBHandle; 
+    int dbsuccess = (0 == database_connect(&DBHandle, cfg_mysql.dbname)) ? 1 : 0;
+    if (!dbsuccess) {
+        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
+        MyDBOp_CloseDB(&DBHandle);
+        return -1;
+    }
+    u32 stattime; //确保不一直执行SQL
     SET_COUNTER(stattime);
     db_event_t *db_event = NULL;
     while (dbsuccess && NULL != (db_event = db_process_pop_event(&vdm->db_process)) && !CMP_COUNTER(stattime, MIN_RELEASE_INTERVAL / 3)) {
@@ -234,7 +239,7 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
         x_log_debug("%s : 性能测试[DB] delay[%.3f ms].", __FUNCTION__, get_delay(&ticktime));
 #endif
     }
-    if (dbsuccess) MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_CloseDB(&DBHandle);
     return xTHREAD_DEFAULT_SECOND_INTERVAL;
 }
 

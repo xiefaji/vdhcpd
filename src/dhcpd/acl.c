@@ -1,4 +1,5 @@
 #include "dhcpd.h"
+#include "share/xlog.h"
 
 /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
 // MAC地址控制
@@ -65,6 +66,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        MyDBOp_CloseDB(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
@@ -73,6 +75,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
+    x_log_warn("dhcp服务数:%d\n",CSqlRecorDset_GetRecordCount(&Query));
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
         macaddr_group_t *macaddr_group = macaddr_group_init();
         CSqlRecorDset_GetFieldValue_U32(&Query, "id", &macaddr_group->nID);
@@ -100,6 +103,7 @@ PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        MyDBOp_CloseDB(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }

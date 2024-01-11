@@ -259,7 +259,10 @@ PRIVATE struct vdhcpd_assignment *dhcpv6_lease(packet_process_t *packet_process,
     } else {
         a->leasetime = dhcpd_server->leasetime;
         if (ipv6_empty(a->addr6))
-            dhcpv6_assign(packet_process, a, &request->v6.reqaddr);
+            if (!dhcpv6_assign(packet_process, a, &request->v6.reqaddr)) {
+                free_assignment(a);
+                a = NULL;
+            }
     }
     return a;
 }
@@ -310,9 +313,11 @@ PUBLIC int server6_process(packet_process_t *packet_process)
         reply->v6.msgcode = DHCPV6_MSG_REPLY;
     } break;
     case DHCPV6_MSG_RENEW: {
+        if(a)
         reply->v6.msgcode = (a && a->leasetime) ? DHCPV6_MSG_REPLY : DHCPV6_MSG_RECONFIGURE;
     } break;
     case DHCPV6_MSG_REBIND: {
+        if(a)
         reply->v6.msgcode = (a && a->leasetime) ? DHCPV6_MSG_REPLY : DHCPV6_MSG_RECONFIGURE;
     } break;
     case DHCPV6_MSG_RELEASE: {
@@ -368,6 +373,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
                 reply->v6.msgcode = DHCPV6_MSG_REPLY;
                 dhcpv6_put(&rep, &cookie, DHCPV6_OPT_RAPID_COMMIT, 0, 0);
             } else if (realtime_info->v6.reqopts[i] == DHCPV6_OPT_LIFETIME) {
+                if(a)
                 dhcpv6_put(&rep, &cookie, DHCPV6_OPT_LIFETIME, 4, &a->leasetime);
             }
         }

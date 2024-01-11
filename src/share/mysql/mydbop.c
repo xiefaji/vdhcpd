@@ -1,4 +1,5 @@
 #include <string.h>
+#include "share/defines.h"
 #include "share/xlog.h"
 #include "mydbop.h"
 
@@ -31,12 +32,12 @@ PUBLIC bool MyDBOp_OpenDB(PMYDBOP pMyDB,const char *username,const char *passwor
         CSqlRecorDset_SetConn(&pMyDB->m_Query,pMyDB->m_pDB);//m_Query.InitConn(m_pDB);
         CSqlRecorDset_ExecSQL(&pMyDB->m_Query,"set names utf8");//m_Query.ExecSQL("set names gbk");
     }
-
-    pMyDB->username = strdup(username);
-    pMyDB->password = strdup(password);
-    pMyDB->dbname = strdup(dbname);
-    pMyDB->serverip = strdup(serverip);
-    pMyDB->serverport = serverport;
+ 
+    // BCOPY(username, pMyDB->username, strlen(username)); 
+    // BCOPY(password, pMyDB->password, strlen(password)); 
+    // BCOPY(dbname, pMyDB->dbname, strlen(dbname)); 
+    // BCOPY(serverip, pMyDB->serverip, strlen(serverip));
+    // pMyDB->serverport = serverport;
     return bRet;
 }
 
@@ -46,11 +47,7 @@ PUBLIC bool MyDBOp_CloseDB(PMYDBOP pMyDB)
         MysqlBase_CloseDB(pMyDB->m_pDB);//m_pDB->CloseDB();
         xFREE(pMyDB->m_pDB);
         pMyDB->m_pDB = NULL;
-    }
-    xFREE(pMyDB->username);
-    xFREE(pMyDB->password);
-    xFREE(pMyDB->dbname);
-    xFREE(pMyDB->serverip);
+    } 
     return true;
 }
 

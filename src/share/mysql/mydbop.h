@@ -4,13 +4,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mysqldb.h"
+#include "share/defines.h"
 
 typedef struct {
     PMYSQLBASE m_pDB;
     MYSQLRECORDSET m_Query;
-    char *username,*password;
-    char *dbname;
-    char *serverip;
+    char username[MAXNAMELEN];
+    char password[MAXNAMELEN];
+    char dbname[MAXNAMELEN];
+    char serverip[MAXNAMELEN];
     unsigned short serverport;
     int m_nAlreadyInit;
 }MYDBOP,*PMYDBOP;
