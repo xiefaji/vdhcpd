@@ -1,7 +1,7 @@
 #ifndef _dhcp_config_h
 #define _dhcp_config_h
 #define PACKAGE_NAME "DHCP Daemon"
-#define PACKAGE_VERSION "2023122201"
+#define PACKAGE_VERSION "202311101"
 #define PACKAGE_MODULES "DHCP服务端"
 
 //默认配置路径
