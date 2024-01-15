@@ -291,7 +291,7 @@ cJSON *cJSON_Parse_from_file(const char *file_name)
     char *pvalue = (char *)cJSON_malloc(file_size+1);
     memset(pvalue,0,file_size+1);
     rewind(pFILE);
-    fread(pvalue,sizeof(char),file_size,pFILE);
+    unsigned long r __attribute__((unused)) = fread(pvalue,sizeof(char),file_size,pFILE);
     pvalue[file_size] = '\0';
     fclose(pFILE);
 

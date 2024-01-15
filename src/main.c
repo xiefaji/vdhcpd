@@ -86,9 +86,9 @@ int main(int argc, char *argv[])
 
     path_cfg_init(PATH_CONFILE);
     //daemon启动
-    if (g_daemon_mode)
-        daemon(0, 0);
-
+    if (g_daemon_mode) {
+        int r __attribute__((unused)) = daemon(0, 0);
+    }
     if (already_running(path_cfg.lockfile))
         return -1;
     write_pidfile(path_cfg.pidfile);

@@ -90,8 +90,9 @@ struct dhcpv4_message {
 struct dhcpv4_option {
     u8 type;
     u8 len;
-    u8 data[];
+    u8 data[0];
 };
+
 
 #define dhcpv4_for_each_option(start, end, opt)\
     for (opt = (struct dhcpv4_option *)(start); \

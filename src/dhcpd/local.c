@@ -56,7 +56,7 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
-    PRIVATE u32 last_assignment;
+    static u32 last_assignment;
     if (CMP_COUNTER(last_assignment, 3)) {
         SET_COUNTER(last_assignment);
         server_stats_main_maintain();
@@ -65,7 +65,9 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
     //接收数据包并处理
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
     for (int idx = 0; idx < receive_bucket->count; ++idx) {
+#ifdef CLIB_DEBUG
         x_log_warn("接收到报文");
+#endif
         packet_process_t packet_process;
         BZERO(&packet_process, sizeof(packet_process_t));
         struct mmsghdr *packets = &receive_bucket->receives.packets[idx];
@@ -385,18 +387,19 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
                 BCOPY(&odata[4], &packet_process->macaddr, sizeof(mac_address_t));
             duid_len = olen;
             BCOPY(odata, duid, olen);
-        } /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
-            request->v4.msgcode = opt->data[0];
-        }*/ else if (otype == DHCPV6_OPT_ORO) {//请求OPTIONS内容
+        }                                   /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
+                                              request->v4.msgcode = opt->data[0];
+                                          }*/
+        else if (otype == DHCPV6_OPT_ORO) { //请求OPTIONS内容
             reqopts_len = olen;
             BCOPY(odata, reqopts, olen);
-        } else if (otype == DHCPV6_OPT_FQDN) {//终端主机名
-            u8 fqdn_buf[MAXNAMELEN+1]={0};
+        } else if (otype == DHCPV6_OPT_FQDN) { //终端主机名
+            u8 fqdn_buf[MAXNAMELEN + 1] = {0};
             BCOPY(odata, fqdn_buf, olen);
             fqdn_buf[olen++] = 0;
             if (dn_expand(&fqdn_buf[1], &fqdn_buf[olen], &fqdn_buf[1], hostname, sizeof(hostname)) > 0)
                 hostname_len = strcspn(hostname, ".");
-        } else if (otype == DHCPV6_OPT_VENDOR_CLASS) {//厂商
+        } else if (otype == DHCPV6_OPT_VENDOR_CLASS) { //厂商
             vendorname_len = olen;
             BCOPY(odata, vendorname, olen);
         } /*else if (opt->type == DHCPV4_OPT_SERVERID && opt->len == 4) {//服务ID
@@ -404,7 +407,8 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
             BCOPY(opt->data, &ipaddr, sizeof(ip4_address_t));
             if (KEY_TREE_NODES(&dhcpd_server->key_serverid) && !key_rbsearch(&dhcpd_server->key_serverid, ipaddr.address))
                 return -1;//存在服务ID列表，但匹配失败
-        }*/ else if (otype == DHCPV6_OPT_IA_NA) {
+        }*/
+        else if (otype == DHCPV6_OPT_IA_NA) {
             struct opt_ia_hdr *ia_hdr = (struct opt_ia_hdr *)(odata - 4);
             request->v6.iaid = ia_hdr->iaid;
             u32 offset = offsetof(struct opt_ia_hdr, u) - 4;

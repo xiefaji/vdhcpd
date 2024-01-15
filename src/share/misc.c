@@ -414,9 +414,9 @@ PUBLIC int already_running(const char *filename)
         exit(1);
     }
     /* 写入运行实例的pid */
-    ftruncate(fd, 0);
+    int r __attribute__((unused)) = ftruncate(fd, 0);
     snprintf(buf,sizeof(buf)-1, "%ld\n", (long)getpid());
-    write(fd, buf, strlen(buf) + 1);
+    r = write(fd, buf, strlen(buf) + 1);
     return 0;
 }
 
@@ -434,8 +434,8 @@ PUBLIC int write_pidfile(const char *pidfile)
     snprintf(buf,sizeof(buf)-1, "%ld\n", (long)getpid());
     int len = strlen(buf)+1;
     /* 写入运行实例的pid */
-    ftruncate(fd, len);
-    write(fd, buf, len);
+    int r __attribute__((unused)) = ftruncate(fd, len);
+    r = write(fd, buf, len);
     close(fd);
     return 0;
 }
@@ -498,9 +498,9 @@ PUBLIC void dfs_remove_dir()
 
         if (S_ISDIR(st.st_mode))
         {
-            chdir(ent->d_name);
+            int r __attribute__((unused)) = chdir(ent->d_name);
             dfs_remove_dir();
-            chdir("..");
+            r = chdir("..");
         }
 
         remove(ent->d_name);
@@ -512,7 +512,7 @@ PUBLIC void dfs_remove_dir()
 PUBLIC void remove_dir(const char *path_raw)
 {
     char old_path[255];
-    getcwd(old_path, 255);
+    char *c __attribute__((unused)) = getcwd(old_path, 255);
 
     if (chdir(path_raw) == -1)
     {
@@ -521,7 +521,7 @@ PUBLIC void remove_dir(const char *path_raw)
     }
 
     dfs_remove_dir();
-    chdir(old_path);
+    int r __attribute__((unused)) = chdir(old_path);
 
     /*
        如果你想删除该目录本身的话,取消注释

@@ -24,7 +24,10 @@ PUBLIC void dhcpd_server_release(void *p)
         xEXACTVLAN_Free(dhcpd_server->pEXACTVLAN);
         dhcpd_lease_main_release(dhcpd_server->staticlease_main);
         key_tree_destroy2(&dhcpd_server->key_serverid, NULL);
-        key_tree_destroy2(&dhcpd_server->iface.key_all_lineip4, NULL);
+        if (dhcpd_server->iface.key_all_lineip4) {
+            key_tree_destroy2(dhcpd_server->iface.key_all_lineip4, NULL);
+            free(dhcpd_server->iface.key_all_lineip4);
+        }
         xfree(dhcpd_server);
     }
 }
@@ -475,7 +478,9 @@ PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_qu
         CSqlRecorDset_GetFieldValue_String(&Query, "szIP", szIP, MINNAMELEN);
         ip4_gateway_t *ip4_gateway = ip4_gateway_init(szIP, nPrefix);
         struct key_node *knode = key_rbinsert(key_all_lineip4, ip4_gateway->gateway.address, ip4_gateway);
-        if (knode) ip4_gateway_release(ip4_gateway);
+        if (knode)
+            ip4_gateway_release(ip4_gateway);
+
         CSqlRecorDset_MoveNext(&Query);
     }
 
