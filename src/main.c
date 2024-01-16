@@ -58,6 +58,7 @@ PRIVATE void signal_callback(int num)
         break;
     case SIGINT:
     case SIGTERM:
+    
         x_log_warn("End %s 正常退出. version [%s] signal[%d]..", PACKAGE_NAME"["PACKAGE_MODULES"]", PACKAGE_VERSION, num);
         xthread_shutdown();
         vdhcpd_shutdown();

@@ -327,7 +327,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     case DHCPV6_MSG_RECONFIGURE:
         break;
     case DHCPV6_MSG_INFORMATION_REQUEST:
-#ifdef DEBUG
+#ifdef CLIB_DEBUG
         x_log_warn("DHCPV6_MSG_INFORMATION_REQUEST");
 #endif // DEBUG
         reply->v6.msgcode = DHCPV6_MSG_REPLY;

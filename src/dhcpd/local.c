@@ -96,7 +96,9 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
         switch (packet_process.dpi.process) {
         case DEFAULT_DHCPv4_PROCESS:
             packet_process4(&packet_process, pRecycleTrash);
+            #ifdef CLIB_DEBUG
             x_log_warn("DHCPv4报文处理");
+            #endif
             break;
         case DEFAULT_DHCPv6_PROCESS:
             packet_process6(&packet_process, pRecycleTrash);

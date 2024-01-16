@@ -153,7 +153,7 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
 
         assigned = dhcpv4_insert_assignment(packet_process, a, n_try);/*动态IP*/
         if (assigned) {
-            #ifdef DEBUG
+            #ifdef CLIB_DEBUG
             x_log_warn("接入服务[分配地址]: 动态IP地址 "IPV4FMT" (try %u of %u).", IPV4BYTES(a->addr), i + 1, count);
             #endif // DEBUG 
             return true;
@@ -174,7 +174,9 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     time_t now = vdhcpd_time();
 
     if (staticlease && a && BCMP(&staticlease->u.v4.ipaddr, &a->ipaddr, sizeof(ip4_address_t))) {
+        #ifdef CLIB_DEBUG
         x_log_warn("静态租约释放租约变量");
+        #endif
         free_assignment(a); 
         a = NULL;
     }
@@ -186,7 +188,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     //    }
 
     if (msgcode == DHCPV4_MSG_DISCOVER || msgcode == DHCPV4_MSG_REQUEST) {//租约申请/续租
-    #ifdef DEBUG
+    #ifdef CLIB_DEBUG
     x_log_warn("DISCOVER || REQUEST MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
     #endif // DEBUG 
 
@@ -214,7 +216,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 }
 
                 assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
-                #ifdef DEBUG
+                #ifdef CLIB_DEBUG
                 if(!assigned){
                     x_log_warn(" 未分配到ip");
                 }else{
@@ -228,7 +230,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
             dhcpd_server_stats_lock(server_stats);
             list_del_init(&a->head);
             dhcpd_server_stats_unlock(server_stats);
-            #ifdef DEBUG
+            #ifdef CLIB_DEBUG
             x_log_warn(" 子网掩码问题没有发送报文");
             #endif // DEBUG 
             a->addr.address = INADDR_ANY;
@@ -257,7 +259,9 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
             }
         } else if ((!assigned) && a) {
             /* Cleanup failed assignment */
+            #ifdef CLIB_DEBUG
             x_log_warn("删除租约");
+            #endif
             free_assignment(a);
             a = NULL;
         }
@@ -382,8 +386,8 @@ PUBLIC int server4_process(packet_process_t *packet_process)
         }
     }else
     {
-        #ifdef DEBUG
-        x_log_warn("分配失败:MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
+        #ifdef CLIB_DEBUG
+        x_log_warn("租约不存在:MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
         #endif // DEBUG 
     }
 
@@ -436,7 +440,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
 
     reply->payload = &rep;
     reply->payload_len = PACKET4_SIZE(&rep, cookie);
-#ifdef DEBUG
+#ifdef CLIB_DEBUG
     x_log_warn("发送报文");
 #endif // DEBUG 
     return server4_send_reply_packet(packet_process, reply, dest);
