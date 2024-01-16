@@ -318,7 +318,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
     if (reqmsg != DHCPV4_MSG_INFORM)
         a = dhcpv4_lease(packet_process, reqmsg);
 
-    if (!a || !a->addr.address) {
+    if (!a ) {
         if (reqmsg == DHCPV4_MSG_REQUEST) reply->v4.msgcode = DHCPV4_MSG_NAK;
         else if (reqmsg == DHCPV4_MSG_DISCOVER) return -1;
     } else if (reqmsg == DHCPV4_MSG_DISCOVER) {
