@@ -186,6 +186,7 @@ PRIVATE int packet_do_dpi(packet_process_t *packet_process)
     packet_process->dpi.l3 = (unsigned char *)&ephdr->data[offset];
     packet_process->dpi.l3len = ephdr->data_len - offset;
     request->ethhdr = ethhdr;
+    x_log_warn("报文信息:线路ID: %d ovlan: %d vlan: %d vlanproto: %d %d",packet_process->dpi.lineid,packet_process->dpi.vlanid[0],packet_process->dpi.vlanid[1],packet_process->dpi.vlanproto[0],packet_process->dpi.vlanproto[1]);
 #endif
     return 0;
 }
