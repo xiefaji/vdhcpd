@@ -48,8 +48,10 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
             continue;
 
         packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.realtime_info->lineid);
-        if (!packet_process.dhcpd_server)
+        if (!packet_process.dhcpd_server){
+            x_log_warn("DHCP服务查找失败 id:%d",packet_process.realtime_info->lineid);     
             continue;//DHCP服务查找失败
+        } 
 
         //报文响应
         relay4_send_reply_packet(&packet_process);
@@ -71,8 +73,10 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
     BCOPY(rep->chaddr, &packet_process->macaddr, sizeof(mac_address_t));
     //查找终端信息
     realtime_info_t *realtime_info = packet_process->realtime_info = realtime_search(packet_process);
-    if (!realtime_info)
+    if (!realtime_info){
+        x_log_warn("实时租约信息不存在");
         return -1;
+    } 
 
     u32 leasetime = 0;
     u8 *start = &rep->options[4];

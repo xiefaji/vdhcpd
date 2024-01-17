@@ -78,7 +78,7 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
         packet_do_dpi(&packet_process);
         packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.dpi.lineid);
         if (!packet_process.dhcpd_server){
-            x_log_warn("DHCP服务查找失败");
+            x_log_warn("DHCP服务查找失败,查找id %d",packet_process.dpi.lineid);
             continue;//DHCP服务查找失败
             }
 
@@ -247,19 +247,28 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
 
-    if (!dhcpd_server->nEnabled)
+    if (!dhcpd_server->nEnabled){
+        x_log_warn("DHCP服务停用");
         return -1;//DHCP服务停用
+        }
 
-    if (!ENABLE_DHCP_IPV4(dhcpd_server) && !ENABLE_DHCP_IPV6(dhcpd_server))
+    if (!ENABLE_DHCP_IPV4(dhcpd_server) && !ENABLE_DHCP_IPV6(dhcpd_server)){
+        x_log_warn("IPV4/IPV6模式均停用");
         return -1;//IPV4/IPV6模式均停用
+    } 
 
 #ifndef VERSION_VNAAS
-    if (dhcpd_server->iface.driveid != packet_process->dpi.driveid)
+    if (dhcpd_server->iface.driveid != packet_process->dpi.driveid){
+        x_log_warn("监听物理网卡不匹配");
         return -1;//监听物理网卡不匹配
+        }
 #endif
 
-    if (!xEXACTVLAN_Match(dhcpd_server->pEXACTVLAN, packet_process->dpi.vlanid[0], packet_process->dpi.vlanid[1]))
-        return -1;//监听VLAN/QINQ不匹配
+    if (!xEXACTVLAN_Match(dhcpd_server->pEXACTVLAN, packet_process->dpi.vlanid[0], packet_process->dpi.vlanid[1])){
+        x_log_warn("监听VLAN/QINQ不匹配");
+         return -1;//监听VLAN/QINQ不匹配
+    }
+        
 
     return 0;
 }
@@ -272,8 +281,10 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
     struct dhcpv4_message *req = request->payload;
 
     if (request->payload_len < offsetof(struct dhcpv4_message, options) + 4 ||
-            req->op != DHCPV4_BOOTREQUEST || req->hlen != ETH_ALEN)
-        return -1;
+            req->op != DHCPV4_BOOTREQUEST || req->hlen != ETH_ALEN){
+            x_log_warn("v4报文头解析失败");
+            return -1;
+            } 
 
     BCOPY(req->chaddr, &packet_process->macaddr, sizeof(mac_address_t));
     //存储终端信息
