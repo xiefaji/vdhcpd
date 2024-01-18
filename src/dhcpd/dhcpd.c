@@ -5,6 +5,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include "dhcpd.h"
+#include "share/xlog.h"
 
 PUBLIC vdhcpd_main_t vdhcpd_main;
 PUBLIC time_t global_time;
@@ -25,7 +26,7 @@ PUBLIC int database_init()
 
 PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
 {
-    MyDBOp_Init(pDBHandle);  
+    MyDBOp_Init(pDBHandle);
     if (!MyDBOp_OpenDB(pDBHandle, cfg_mysql.user, cfg_mysql.pass, dbname, cfg_mysql.ip, cfg_mysql.port)) {
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
         return -1;
@@ -104,7 +105,7 @@ PUBLIC int vdhcpd_release()
     vdhcpd_cfg_release(vdm->cfg_main);
     stats_main_release(&vdm->stats_main);
     db_process_destroy(&vdm->db_process);
-    server_stats_main_release(); 
+    server_stats_main_release();
     macaddr_filter_release(vdm->filter_tree);
     vdhcpd_urandom_release();
 #ifdef VERSION_VNAAS
@@ -191,8 +192,11 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
         vdhcpd_cfg_t *cfg_main = vdhcpd_cfg_reload();
         vdhcpd_cfg_recycle(vdm->cfg_main, pRecycleTrash);
         vdm->cfg_main = cfg_main;
-    } else if (CMP_COUNTER(last_update, 30)) { //局部参数动态更新
-
+    } else if (CMP_COUNTER(last_update, 20)) { //局部参数动态更新
+#ifndef VERSION_VNAAS
+    if(!send_server_info(vdm->cfg_main, vdm->sockfd_main))
+        x_log_warn("发送SLAAC信息失败");
+#endif
         dhcpd_server_update(vdm->cfg_main, pRecycleTrash);
         SET_COUNTER(last_update);
     }
@@ -216,7 +220,7 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
-    MYDBOP DBHandle; 
+    MYDBOP DBHandle;
     int dbsuccess = (0 == database_connect(&DBHandle, cfg_mysql.dbname)) ? 1 : 0;
     if (!dbsuccess) {
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);

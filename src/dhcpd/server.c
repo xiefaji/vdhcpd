@@ -1,13 +1,16 @@
+#include "dhcpd/server.h"
 #include "dhcpd.h"
 #include "share/defines.h"
+#include "share/types.h"
 #include "share/xlog.h"
- 
+#include <string.h>
+
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_queue_t *pRecycleTrash);
 PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server);
 PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server);
-PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server); 
+PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server);
 PUBLIC dhcpd_server_t *dhcpd_server_init()
 {
     dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)xmalloc(sizeof(dhcpd_server_t));
@@ -62,7 +65,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
-    x_log_warn("dhcp服务数:%d\n",CSqlRecorDset_GetRecordCount(&Query));
+    x_log_warn("dhcp服务数:%d\n", CSqlRecorDset_GetRecordCount(&Query));
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
         u16 val16;
         u32 val32;
@@ -77,6 +80,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_server->nLineID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "enable", &dhcpd_server->nEnabled);
         CSqlRecorDset_GetFieldValue_String(&Query, "exactvlan", exactvlan, MAXNAMELEN);
+        BCOPY(exactvlan, dhcpd_server->vlan_str, MAXNAMELEN);
         dhcpd_server->pEXACTVLAN = xEXACTVLAN_init(exactvlan, 1);
         CSqlRecorDset_GetFieldValue_U32(&Query, "stack", &dhcpd_server->mode);
         CSqlRecorDset_GetFieldValue_U32(&Query, "leasetime", &dhcpd_server->leasetime);
@@ -200,7 +204,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         ParseUIntNums(tmpbuffer, dhcpd_server->macctl.aclgroup, DEFAULT_ACLGROUP_SIZE, 0);
 #endif
 
-        //SLAAC
+        // SLAAC
         CSqlRecorDset_GetFieldValue_U16(&Query, "szSlaacPrefix", &dhcpd_server->SLAAC.prefix);
         CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacGateWay", tmpbuffer, MINNAMELEN);
         inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.gateway);
@@ -285,7 +289,7 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     struct key_node *knode = key_first(&cfg_main->key_servers);
     while (knode && knode->data) {
-        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data; 
+        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
         dhcpd_upate_iface(dhcpd_server); //
         dhcpd_upate_iface_lineip(dhcpd_server);
         dhcpd_upate_iface_lineip_all(dhcpd_server, pRecycleTrash);
@@ -296,7 +300,58 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
     }
 }
 
- 
+//发送SLAAC信息
+PUBLIC int send_server_info(void *cfg, int sockfd_main)
+{
+    vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
+    struct key_node *knode = key_first(&cfg_main->key_servers);
+    while (knode && knode->data) {
+        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
+
+        unsigned char buffer[MAXBUFFERLEN + 1] = {0};
+        unsigned int offset = 0, length = 0;
+#ifndef VERSION_VNAAS
+        ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
+        ipcshare_dhcpserver_status_t *pdhcpserver_status = (ipcshare_dhcpserver_status_t *)&ipcsharehdr->pdata[offset];
+        offset += sizeof(ipcshare_dhcpserver_status_t);
+#else
+
+#endif
+        ipcsharehdr->code = CODE_KIND;
+        ipcsharehdr->process = PROCESS_DHCPSERVER;
+        ipcsharehdr->driveid = dhcpd_server->iface.driveid;
+        pdhcpserver_status->serverid = dhcpd_server->nID;
+        u16 enable = 0;
+
+        if (dhcpd_server->nEnabled)
+            enable = enable | DHCPSERVER_ENABLED;
+        if (ENABLE_IPV4_RELAY(dhcpd_server))
+            enable = enable | DHCPSERVER_IPV4RELAY;
+        if (ENABLE_IPV6_RELAY(dhcpd_server))
+            enable = enable | DHCPSERVER_IPV6RELAY;
+        if (ENABLE_IPV4_SERVER(dhcpd_server))
+            enable = enable | DHCPSERVER_IPV4;
+        if (ENABLE_IPV6_SERVER(dhcpd_server))
+            enable = enable | DHCPSERVER_IPV6;
+        if (ENABLE_IPV6_SLAAC(dhcpd_server))
+            enable = enable | DHCPSERVER_SLAAC;
+        if (ENABLE_IPV6_PD(dhcpd_server))
+            enable = enable | DHCPSERVER_IPV6PD;
+        pdhcpserver_status->enabled = enable;
+        pdhcpserver_status->prefix = dhcpd_server->dhcpv6.prefix;
+        pdhcpserver_status->prefix_addr=dhcpd_server->dhcpv6.prefix_addr; 
+        BCOPY(dhcpd_server->vlan_str, pdhcpserver_status->exactvlan, sizeof(dhcpd_server->vlan_str));
+        offset += sizeof(dhcpd_server->vlan_str);
+        struct sockaddr_in sin;
+        BZERO(&sin, sizeof(struct sockaddr_in));
+        sin.sin_family = AF_INET;
+        sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
+        sin.sin_addr.s_addr = 0x100007f;
+        if(sendto(sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin)))
+            return -1;
+    }
+    return 1;
+}
 
 //读取线路配置
 PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
@@ -442,8 +497,8 @@ PUBLIC int iface_subnet_match(dhcpd_server_t *dhcpd_server, const ip4_address_t 
     }
     return retcode;
 }
-PUBLIC void iface_lineip_all_release(){
-    
+PUBLIC void iface_lineip_all_release()
+{
 }
 PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_queue_t *pRecycleTrash)
 {

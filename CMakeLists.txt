@@ -50,7 +50,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # 添加宏定义
 add_definitions(-D_GNU_SOURCE)
-add_definitions(-DVERSION_VNAAS)
+# add_definitions(-DVERSION_VNAAS)
 
 # add_definitions(-DCHECK_PERFORMANCE)
 

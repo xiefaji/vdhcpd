@@ -16,6 +16,7 @@ typedef enum {
     MODE_IPV4_SERVER = (1<<4),
     MODE_IPV6_SERVER = (1<<6),
     MODE_IPV6_SLAAC = ((1<<8)+(1<<6)),
+    MODE_IPV6_PD =(1<<10)
 } dhcpd_mode_t;
 
 //DHCP服务配置
@@ -25,6 +26,7 @@ typedef struct {
     u32 nEnabled;
     u32 leasetime;//租约时长 单位：秒
     dhcpd_mode_t mode;
+    u8  vlan_str[MAXNAMELEN+1];
     PEXACTVLAN pEXACTVLAN;//精确VLAN匹配
 
     //线路配置信息
@@ -100,6 +102,7 @@ typedef struct {
 #define ENABLE_IPV4_RELAY(s) ((s)->mode & MODE_IPV4_RELAY)
 #define ENABLE_IPV6_RELAY(s) ((s)->mode & MODE_IPV6_RELAY)
 #define ENABLE_IPV6_SLAAC(s) ((s)->mode & MODE_IPV6_SLAAC)
+#define ENABLE_IPV6_PD(s)    ((s)->mode & MODE_IPV6_PD)
 #define ENABLE_RELAY(s) (ENABLE_IPV4_RELAY(s) || ENABLE_IPV6_RELAY(s))
 #define ENABLE_IPV4_SERVER(s) ((s)->mode & MODE_IPV4_SERVER)
 #define ENABLE_IPV6_SERVER(s) ((s)->mode & MODE_IPV6_SERVER)
@@ -115,6 +118,7 @@ PUBLIC_DATA void dhcpd_server_recycle(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA void dhcpd_server_reload(void *cfg);
 PUBLIC_DATA void dhcpd_server_check(void *cfg);
 PUBLIC_DATA void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash);
+PUBLIC int send_server_info(void *cfg, int sockfd_main);
 PUBLIC_DATA int iface_subnet_match(dhcpd_server_t *dhcpd_server, const ip4_address_t ipaddr);
 
 PUBLIC_DATA dhcpd_server_t *dhcpd_server_search(void *cfg, const u32 nID);

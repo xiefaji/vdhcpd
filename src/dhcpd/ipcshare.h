@@ -2,6 +2,7 @@
 #define _dhcp_ipcshare_h
 
 #include <net/ethernet.h>
+#include "share/defines.h"
 #include "share/types.h"
 
 #define DEFAULT_DHCPv4_PROCESS  2101
@@ -11,9 +12,11 @@
 #ifndef VERSION_VNAAS
 #define DEFAULT_CORE_UDP_PORT 6668/*主程序*/
 #define DEFAULT_DHCP_UDP_PORT 6667/*DHCPD*/
+#define PROCESS_DHCPSERVER 2340 /*给主程序发送SLAAC信息*/
 #define DEFAULT_WEBACTION_UDP_PORT 20000
 #define CODE_REQUEST    0
 #define CODE_REPLY  1
+#define CODE_KIND  13 /*给主程序发送SLAAC信息*/
 #else
 #define VNAAS_POP_IPC_DGRAM_SOCK "/run/vnaas_pop_ipc.socket"
 #define VNAAS_DHCP_IPC_DGRAM_SOCK "/run/vnaas_dhcp_ipc.socket"
@@ -79,5 +82,19 @@ typedef struct {
     u8 data[0];
 } __attribute__((packed)) dhcp_external_proc_hdr_t;
 #endif
-
+typedef struct {
+    u16 serverid;
+    char name[64];
+#define DHCPSERVER_ENABLED (1<<0)
+#define DHCPSERVER_IPV4RELAY (1<<1)
+#define DHCPSERVER_IPV6RELAY (1<<2)
+#define DHCPSERVER_IPV4 (1<<3)
+#define DHCPSERVER_IPV6 (1<<4)//DHCPv6 IA-NA
+#define DHCPSERVER_IPV6PD (1<<5)//DHCPv6 IA-PD
+#define DHCPSERVER_SLAAC (1<<6)//IPv6无状态
+    u16 enabled;
+    ip6_address_t prefix_addr;
+    u8 prefix;
+    char exactvlan[0];//精确VLAN
+} __attribute__((packed)) ipcshare_dhcpserver_status_t;
 #endif
