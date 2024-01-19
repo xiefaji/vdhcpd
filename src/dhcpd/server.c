@@ -340,13 +340,18 @@ PUBLIC int send_server_info(void *cfg, int sockfd_main)
         pdhcpserver_status->enabled = enable;
         pdhcpserver_status->prefix = dhcpd_server->dhcpv6.prefix;
         pdhcpserver_status->prefix_addr=dhcpd_server->dhcpv6.prefix_addr; 
-        BCOPY(dhcpd_server->vlan_str, pdhcpserver_status->exactvlan, sizeof(dhcpd_server->vlan_str));
-        offset += sizeof(dhcpd_server->vlan_str);
+
+        BCOPY(dhcpd_server->pEXACTVLAN, pdhcpserver_status->exactvlan, sizeof(dhcpd_server->pEXACTVLAN));
+        offset += sizeof(dhcpd_server->pEXACTVLAN);
+        length=sizeof(ipcshare_hdr_t)+sizeof(ipcshare_dhcpserver_status_t)+ offset;
         struct sockaddr_in sin;
         BZERO(&sin, sizeof(struct sockaddr_in));
         sin.sin_family = AF_INET;
         sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
         sin.sin_addr.s_addr = 0x100007f;
+        #ifdef CLIB_DEBUG
+            x_log_warn("buff内容; %s buff长度",buffer,length);
+        #endif // DEBUG
         if(sendto(sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin)))
             return -1;
     }

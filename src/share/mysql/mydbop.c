@@ -14,6 +14,8 @@ PUBLIC void MyDBOp_Init(PMYDBOP pMyDB)
 PUBLIC void MyDBOp_Destroy(PMYDBOP pMyDB)
 {
     MyDBOp_CloseDB(pMyDB);
+    CSqlRecorDset_CloseRec(&pMyDB->m_Query);
+    CSqlRecorDset_Destroy(&pMyDB->m_Query);
 }
 
 PUBLIC bool MyDBOp_ReOpenDB(PMYDBOP pMyDB)

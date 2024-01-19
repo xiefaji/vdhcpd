@@ -64,7 +64,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_MACACL_GROUP);
 
     MYDBOP DBHandle;
-    MyDBOp_Init(&DBHandle);
+    // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
         MyDBOp_CloseDB(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
@@ -87,7 +87,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
         }
 
         CSqlRecorDset_MoveNext(&Query);
-    }
+    } 
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
     MyDBOp_CloseDB(&DBHandle);

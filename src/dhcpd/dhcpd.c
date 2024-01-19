@@ -28,6 +28,7 @@ PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
 {
     MyDBOp_Init(pDBHandle);
     if (!MyDBOp_OpenDB(pDBHandle, cfg_mysql.user, cfg_mysql.pass, dbname, cfg_mysql.ip, cfg_mysql.port)) {
+        MyDBOp_Destroy(pDBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
         return -1;
     }

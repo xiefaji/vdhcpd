@@ -14,7 +14,7 @@ uint real_connext_mutex = 0;
 #define real_mutex_unlock()  {__sync_bool_compare_and_swap(&real_connext_mutex,1,0); }
 #define real_mutex_lock()    { while (!(__sync_bool_compare_and_swap (&real_connext_mutex,0, 1) )) {sched_yield();}}
 
-
+ 
 long long atoll (const char *p)
 {
     int minus = 0;
@@ -72,12 +72,13 @@ PUBLIC void MysqlBase_CloseDB(PMYSQLBASE pDB)
 
 PUBLIC void CSqlRecorDset_Init(PMYSQLRECORDSET pRecor)
 {
-    pRecor->m_con = NULL;
-    pRecor->m_res = NULL;
-    pRecor->m_field = NULL;
-    pRecor->m_lies = 0;
-    pRecor->m_rows = 0;
-    pRecor->m_isEndOf = true;
+    memset(pRecor,0,sizeof(MYSQLRECORDSET));
+    // pRecor->m_con = NULL;
+    // pRecor->m_res = NULL;
+    // pRecor->m_field = NULL;
+    // pRecor->m_lies = 0;
+    // pRecor->m_rows = 0;
+    // pRecor->m_isEndOf = true;
 }
 
 PUBLIC void CSqlRecorDset_Destroy(PMYSQLRECORDSET pRecor)
