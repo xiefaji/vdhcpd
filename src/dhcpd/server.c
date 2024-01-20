@@ -316,9 +316,7 @@ PUBLIC int send_server_info(dhcpd_server_t *dhcpd_server, int sockfd_main)
         ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
         ipcshare_dhcpserver_status_t *pdhcpserver_status = (ipcshare_dhcpserver_status_t *)&ipcsharehdr->pdata[offset];
         offset += sizeof(ipcshare_dhcpserver_status_t);
-#else
 
-#endif
         ipcsharehdr->code = CODE_KIND;
         ipcsharehdr->process = PROCESS_DHCPSERVER;
         ipcsharehdr->driveid = dhcpd_server->iface.driveid;
@@ -355,6 +353,7 @@ PUBLIC int send_server_info(dhcpd_server_t *dhcpd_server, int sockfd_main)
         if(sendto(sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin)))
             return -1;
  
+#endif
         return 1;
 }
 

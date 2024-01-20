@@ -2,9 +2,10 @@
 cmake_minimum_required(VERSION 3.0)
 
 # 设置项目名称
-# project(vdhcpd)
-project(xsdhcp)
-
+project(vdhcpd)
+# project(xsdhcp)
+# 开启头定义使用新架构
+add_definitions(-DVERSION_VNAAS)
  
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LC)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UP)
