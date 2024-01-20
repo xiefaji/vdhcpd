@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "mydbop.h": "c",
+        "mysqldb.h": "c",
+        "defines.h": "c",
+        "mysql.h": "c"
+    }
+}

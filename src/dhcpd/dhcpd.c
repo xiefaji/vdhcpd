@@ -194,7 +194,7 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
         vdhcpd_cfg_recycle(vdhcpd_cfg_reload ,pRecycleTrash);
         vdm->cfg_main = cfg_main;
     } else if (CMP_COUNTER(last_update, 8)) { //局部参数动态更新
-        x_log_warn("目前:vdm->sockfd_main%d",vdm->sockfd_main);
+      
         dhcpd_server_update(vdm->cfg_main, pRecycleTrash,vdm->sockfd_main);
         SET_COUNTER(last_update);
  

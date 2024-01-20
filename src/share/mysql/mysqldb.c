@@ -42,7 +42,7 @@ PUBLIC bool MysqlBase_OpenDB(PMYSQLBASE pDB,const char *username,const char *pas
         x_log_warn("%s : 数据库句柄初始化失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
         return false;
     }
-
+    mysql_thread_init();
     //mysql_options(m_con, MYSQL_OPT_CONNECT_TIMEOUT , "10");
     if (!mysql_real_connect(pDB->m_con,serverip,username,password,dbname,port,NULL,0)) {
         mysql_thread_end();
@@ -63,9 +63,9 @@ PUBLIC void MysqlBase_CloseDB(PMYSQLBASE pDB)
         mysql_close(pDB->m_con);
         pDB->m_con= NULL;
         pthread_mutex_destroy(&pDB->m_cs);
-        real_mutex_lock();
+        real_mutex_lock(); 
         mysql_thread_end();
-        mysql_library_end();
+        mysql_library_end(); 
         real_mutex_unlock();
     }
 }
