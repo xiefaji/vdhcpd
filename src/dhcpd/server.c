@@ -52,7 +52,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     char sql[MINBUFFERLEN + 1] = {0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM %s;", DBTABLE_DHCP_SERVER);
-
+     
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
@@ -66,7 +66,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     x_log_warn("dhcp服务数:%d\n", CSqlRecorDset_GetRecordCount(&Query));
-    for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
+    for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) { 
         u16 val16;
         u32 val32;
         char tmpbuffer[MAXNAMELEN + 1] = {0}, exactvlan[MAXNAMELEN + 1] = {0};
@@ -80,7 +80,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_server->nLineID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "enable", &dhcpd_server->nEnabled);
         CSqlRecorDset_GetFieldValue_String(&Query, "exactvlan", exactvlan, MAXNAMELEN);
-        BCOPY(exactvlan, dhcpd_server->vlan_str, MAXNAMELEN);
+        BCOPY(exactvlan, dhcpd_server->exactvlan, MAXNAMELEN);
         dhcpd_server->pEXACTVLAN = xEXACTVLAN_init(exactvlan, 1);
         CSqlRecorDset_GetFieldValue_U32(&Query, "stack", &dhcpd_server->mode);
         CSqlRecorDset_GetFieldValue_U32(&Query, "leasetime", &dhcpd_server->leasetime);
@@ -213,20 +213,21 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         CSqlRecorDset_GetFieldValue_String(&Query, "szSlaacDns2", tmpbuffer, MINNAMELEN);
         inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->SLAAC.dns[1]);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nSlaacLeaseTime", &dhcpd_server->SLAAC.leasetime);
-
+ 
         for (int i = 0; i < 15; i++) {
             if (i < dhcpd_server->dhcpv6.prefix / 8)
                 dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = dhcpd_server->dhcpv6.gateway.ip_u8[i];
             else
                 dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = 0;
         }
-        struct key_node *knode = key_rbinsert(&cfg_main->key_servers, dhcpd_server->nID, dhcpd_server);
+          struct key_node *knode = key_rbinsert(&cfg_main->key_servers, dhcpd_server->nID, dhcpd_server);
         if (knode) {
             x_log_err("加载DHCP服务配置失败, ID冲突[%d].", dhcpd_server->nID);
             dhcpd_server_release(dhcpd_server);
         }
 
         CSqlRecorDset_MoveNext(&Query);
+         
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
@@ -284,7 +285,7 @@ PUBLIC void dhcpd_server_check(void *cfg)
 }
 
 //配置热更新
-PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
+PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash,int sockfd_main)
 {
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
     struct key_node *knode = key_first(&cfg_main->key_servers);
@@ -296,17 +297,18 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash)
         dhcpd_upate_iface_lineip6(dhcpd_server);
         dhcpd_upate_relay4_iface(dhcpd_server);
         dhcpd_upate_relay6_iface(dhcpd_server);
+#ifndef VERSION_VNAAS
+        send_server_info(dhcpd_server, sockfd_main);
+#endif 
+        x_log_err("sock_main %d",sockfd_main);
         knode = key_next(knode);
     }
 }
 
 //发送SLAAC信息
-PUBLIC int send_server_info(void *cfg, int sockfd_main)
+PUBLIC int send_server_info(dhcpd_server_t *dhcpd_server, int sockfd_main)
 {
-    vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)cfg;
-    struct key_node *knode = key_first(&cfg_main->key_servers);
-    while (knode && knode->data) {
-        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
+     
 
         unsigned char buffer[MAXBUFFERLEN + 1] = {0};
         unsigned int offset = 0, length = 0;
@@ -338,24 +340,22 @@ PUBLIC int send_server_info(void *cfg, int sockfd_main)
         if (ENABLE_IPV6_PD(dhcpd_server))
             enable = enable | DHCPSERVER_IPV6PD;
         pdhcpserver_status->enabled = enable;
-        pdhcpserver_status->prefix = dhcpd_server->dhcpv6.prefix;
-        pdhcpserver_status->prefix_addr=dhcpd_server->dhcpv6.prefix_addr; 
-
-        BCOPY(dhcpd_server->pEXACTVLAN, pdhcpserver_status->exactvlan, sizeof(dhcpd_server->pEXACTVLAN));
-        offset += sizeof(dhcpd_server->pEXACTVLAN);
+        pdhcpserver_status->prefix = dhcpd_server->SLAAC.prefix;
+        pdhcpserver_status->prefix_addr=dhcpd_server->SLAAC.gateway; 
+        BCOPY(dhcpd_server->exactvlan, pdhcpserver_status->exactvlan, strlen(dhcpd_server->exactvlan));
+        offset +=  strlen(dhcpd_server->exactvlan);
         length=sizeof(ipcshare_hdr_t)+sizeof(ipcshare_dhcpserver_status_t)+ offset;
+        ipcsharehdr->datalen=length;
         struct sockaddr_in sin;
         BZERO(&sin, sizeof(struct sockaddr_in));
         sin.sin_family = AF_INET;
         sin.sin_port = htons(DEFAULT_CORE_UDP_PORT);
         sin.sin_addr.s_addr = 0x100007f;
-        #ifdef CLIB_DEBUG
-            x_log_warn("buff内容; %s buff长度",buffer,length);
-        #endif // DEBUG
+     
         if(sendto(sockfd_main, buffer, length, 0, (struct sockaddr *)&sin, sizeof(sin)))
             return -1;
-    }
-    return 1;
+ 
+        return 1;
 }
 
 //读取线路配置

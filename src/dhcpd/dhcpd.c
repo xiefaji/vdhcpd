@@ -158,14 +158,14 @@ PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
 PUBLIC int vdhcpd_start()
 {
     vdhcpd_main_t *vdm = &vdhcpd_main;
-
+  
     //初始化配置
     vdm->cfg_main = vdhcpd_cfg_reload();
     assert(vdm->cfg_main);
 
     x_log_warn("%s Start. version[%s] pid[%d]...", PACKAGE_NAME "[" PACKAGE_MODULES "]", PACKAGE_VERSION, getpid());
     vdhcpd_starttime(vdm);
-
+     
     xthread_create(&vdm->mtThread, "Maintain", vdm, NULL, vdhcpd_maintain, NULL, 0, 0);
     xthread_create(&vdm->dbThread, "DB", vdm, NULL, vdhcpd_db_start, NULL, 0, 0);
     xthread_create(&vdm->webThread, "WEB", vdm, webaction_init, webaction_start, NULL, 0, 0);
@@ -180,7 +180,7 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
     PRIVATE u32 last_rotate, last_update;
-    PRIVATE u32 last_modifytime;
+    PRIVATE u32 last_modifytime; 
 
     //日志文件句柄保活
     if (CMP_COUNTER(last_rotate, 60)) {
@@ -191,15 +191,13 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
     if (vdm->reload_vdhcpd) { //配置重载
         __sync_fetch_and_and(&vdm->reload_vdhcpd, 0);
         vdhcpd_cfg_t *cfg_main = vdhcpd_cfg_reload();
-        vdhcpd_cfg_recycle(vdm->cfg_main, pRecycleTrash);
+        vdhcpd_cfg_recycle(vdhcpd_cfg_reload ,pRecycleTrash);
         vdm->cfg_main = cfg_main;
-    } else if (CMP_COUNTER(last_update, 20)) { //局部参数动态更新
-#ifndef VERSION_VNAAS
-    if(!send_server_info(vdm->cfg_main, vdm->sockfd_main))
-        x_log_warn("发送SLAAC信息失败");
-#endif
-        dhcpd_server_update(vdm->cfg_main, pRecycleTrash);
+    } else if (CMP_COUNTER(last_update, 8)) { //局部参数动态更新
+        x_log_warn("目前:vdm->sockfd_main%d",vdm->sockfd_main);
+        dhcpd_server_update(vdm->cfg_main, pRecycleTrash,vdm->sockfd_main);
         SET_COUNTER(last_update);
+ 
     }
 
     //通信数据过滤[MAC地址重载]
@@ -220,7 +218,7 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
 PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
-
+ 
     MYDBOP DBHandle;
     int dbsuccess = (0 == database_connect(&DBHandle, cfg_mysql.dbname)) ? 1 : 0;
     if (!dbsuccess) {
@@ -250,19 +248,19 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
 
 //配置加载
 PRIVATE vdhcpd_cfg_t *vdhcpd_cfg_reload()
-{
+{ 
     vdhcpd_cfg_t *cfg_main = (vdhcpd_cfg_t *)xmalloc(sizeof(vdhcpd_cfg_t));
     BZERO(cfg_main, sizeof(vdhcpd_cfg_t));
     key_tree_init(&cfg_main->key_servers);
     key_tree_init(&cfg_main->key_servers_line);
     key_tree_init(&cfg_main->key_macaddr_group);
-
+ 
     //加载DHCP服务
     dhcpd_server_reload(cfg_main);
-    dhcpd_server_check(cfg_main);
-    dhcpd_server_update(cfg_main, NULL);
+    dhcpd_server_check(cfg_main); 
+    dhcpd_server_update(cfg_main, NULL,0); 
     //加载MAC地址列表
-    macaddr_acl_reload(cfg_main);
+    macaddr_acl_reload(cfg_main); 
     macaddr_acl_check(cfg_main);
     return cfg_main;
 }
