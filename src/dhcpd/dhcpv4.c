@@ -381,7 +381,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
             SET_COUNTER(realtime_info->updatetick);
             realtime_info->flags |= RLTINFO_FLAGS_SERVER4;
             if (a->flags & OAF_STATIC) realtime_info->flags |= RLTINFO_FLAGS_STATIC4;
-            else realtime_info->flags |= ~RLTINFO_FLAGS_STATIC4;
+            else realtime_info->flags &= ~RLTINFO_FLAGS_STATIC4;
             __sync_fetch_and_add(&realtime_info->update_db4, 1);
         }
     }else
