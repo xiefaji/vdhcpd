@@ -300,7 +300,7 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash,int sock
 #ifndef VERSION_VNAAS
         send_server_info(dhcpd_server, sockfd_main);
 #endif 
-        x_log_err("sock_main %d",sockfd_main);
+        
         knode = key_next(knode);
     }
 }
