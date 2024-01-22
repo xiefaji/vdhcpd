@@ -147,12 +147,12 @@ PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, dbname) < 0) {
-        MyDBOp_CloseDB(&DBHandle);
+        MyDBOp_Destroy(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
         return;
     }
     MyDBOp_ExecSQL(&DBHandle, sql);
-    MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_Destroy(&DBHandle);
 }
 
 PUBLIC int vdhcpd_start()
@@ -223,7 +223,7 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
     int dbsuccess = (0 == database_connect(&DBHandle, cfg_mysql.dbname)) ? 1 : 0;
     if (!dbsuccess) {
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
-        MyDBOp_CloseDB(&DBHandle);
+        MyDBOp_Destroy(&DBHandle);
         return -1;
     }
     u32 stattime; //确保不一直执行SQL
@@ -242,7 +242,7 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
         x_log_debug("%s : 性能测试[DB] delay[%.3f ms].", __FUNCTION__, get_delay(&ticktime));
 #endif
     }
-    MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_Destroy(&DBHandle);
     return xTHREAD_DEFAULT_SECOND_INTERVAL;
 }
 

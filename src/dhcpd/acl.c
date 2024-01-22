@@ -66,7 +66,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        MyDBOp_CloseDB(&DBHandle);
+        MyDBOp_Destroy(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
@@ -90,7 +90,7 @@ PUBLIC void macaddr_acl_reload(void *cfg)
     } 
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
-    MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_Destroy(&DBHandle);
 }
 
 //加载群组MAC地址
@@ -102,7 +102,7 @@ PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
     MYDBOP DBHandle;
     MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        MyDBOp_CloseDB(&DBHandle);
+        MyDBOp_Destroy(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
@@ -128,7 +128,7 @@ PRIVATE void macaddr_item_reload(macaddr_group_t *macaddr_group)
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
-    MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_Destroy(&DBHandle);
 }
 
 PUBLIC void macaddr_acl_check(void *cfg)

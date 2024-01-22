@@ -98,7 +98,7 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        MyDBOp_CloseDB(&DBHandle);
+        MyDBOp_Destroy(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
@@ -131,7 +131,7 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
-    MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_Destroy(&DBHandle);
 }
 
 PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32 serverid/*lineid*/)
@@ -142,7 +142,7 @@ PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        MyDBOp_CloseDB(&DBHandle);
+        MyDBOp_Destroy(&DBHandle);
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
@@ -175,7 +175,7 @@ PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32
     }
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_Destroy(&Query);
-    MyDBOp_CloseDB(&DBHandle);
+    MyDBOp_Destroy(&DBHandle);
 }
 
 //静态租约查询

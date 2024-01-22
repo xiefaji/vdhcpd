@@ -65,7 +65,7 @@ PUBLIC void MysqlBase_CloseDB(PMYSQLBASE pDB)
         pthread_mutex_destroy(&pDB->m_cs);
         real_mutex_lock(); 
         mysql_thread_end();
-        mysql_library_end(); 
+        // mysql_library_end(); 
         real_mutex_unlock();
     }
 }

@@ -8,7 +8,7 @@ PUBLIC void MyDBOp_Init(PMYDBOP pMyDB)
     memset(pMyDB, 0, sizeof(MYDBOP));
     pMyDB->m_pDB = NULL;
     CSqlRecorDset_Init(&pMyDB->m_Query);
-    pMyDB->m_nAlreadyInit=1;
+     
 }
 
 PUBLIC void MyDBOp_Destroy(PMYDBOP pMyDB)
@@ -20,10 +20,13 @@ PUBLIC void MyDBOp_Destroy(PMYDBOP pMyDB)
 
 PUBLIC bool MyDBOp_ReOpenDB(PMYDBOP pMyDB)
 {
+    CSqlRecorDset_CloseRec(pMyDB);
+    CSqlRecorDset_Destroy(pMyDB);
     MyDBOp_CloseDB(pMyDB);
     bool bRet = MyDBOp_OpenDB(pMyDB,pMyDB->username,pMyDB->password,pMyDB->dbname,pMyDB->serverip,pMyDB->serverport);
     return bRet;
 }
+
 
 PUBLIC bool MyDBOp_OpenDB(PMYDBOP pMyDB,const char *username,const char *password,const char *dbname,const char *serverip,const unsigned short serverport)
 {
@@ -46,6 +49,7 @@ PUBLIC bool MyDBOp_OpenDB(PMYDBOP pMyDB,const char *username,const char *passwor
 PUBLIC bool MyDBOp_CloseDB(PMYDBOP pMyDB)
 {
     if (pMyDB->m_pDB) {
+        
         MysqlBase_CloseDB(pMyDB->m_pDB);//m_pDB->CloseDB();
         xFREE(pMyDB->m_pDB);
         pMyDB->m_pDB = NULL;
