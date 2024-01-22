@@ -80,13 +80,15 @@ PUBLIC void server_stats_main_maintain()
 
         //IPv4实时租约
         list_for_each_entry_safe(a, n, &server_stats->dhcpv4_assignments, head) {
-            if (!INFINITE_VALID(a->valid_until) && a->valid_until < now)
+            if ((!INFINITE_VALID(a->valid_until)) && a->valid_until < now){
+                x_log_warn("释放租约");
                 free_assignment(a);
+                }
         }
 
         //IPv6实时租约
         list_for_each_entry_safe(a, n, &server_stats->dhcpv6_assignments, head) {
-            if (!INFINITE_VALID(a->valid_until) && a->valid_until < now)
+            if ((!INFINITE_VALID(a->valid_until)) && a->valid_until < now)
                 free_assignment(a);
         }
 

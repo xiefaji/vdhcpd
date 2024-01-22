@@ -203,7 +203,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 /* Set valid time to 0 for static lease indicating */
                 /* infinite lifetime otherwise current time        */
                 a->leasetime = dhcpd_server->leasetime;
-                a->valid_until = now;
+                a->valid_until = now+MIN_RELEASE_INTERVAL;
                 a->dhcp_free_cb = dhcpv4_free_assignment;
                 a->flags = OAF_DHCPV4;
                 if (staticlease) {
