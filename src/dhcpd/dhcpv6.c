@@ -121,7 +121,7 @@ PRIVATE void generate_ia_pd(struct opt_ia_hdr *ia_hdr, ip6_address_t *addr, pack
     generate_ia(ia_hdr, DHCPV6_OPT_IA_PD, sizeof(struct opt_ia_prefix), request->v6.iaid, leasetime);
 }
 
-//实时租约查找[MACADDR]
+// 实时租约查找[MACADDR]
 PRIVATE struct vdhcpd_assignment *find_assignment_by_macaddr(packet_process_t *packet_process, const mac_address_t macaddr)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
@@ -135,7 +135,7 @@ PRIVATE struct vdhcpd_assignment *find_assignment_by_macaddr(packet_process_t *p
     return NULL;
 }
 
-//实时租约查找[IPADDR]
+// 实时租约查找[IPADDR]
 PRIVATE struct vdhcpd_assignment *find_assignment_by_ipaddr(packet_process_t *packet_process, const ip6_address_t ipaddr /*netbit*/)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
@@ -161,7 +161,7 @@ PRIVATE bool dhcpv6_insert_assignment(packet_process_t *packet_process, struct v
     dhcpd_staticlease_t *staticlease = staticlease_search6_ipaddr(dhcpd_server->staticlease_main, addr6);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;
-    if(!BCMP(&addr6, &dhcpd_server->dhcpv6.gateway , sizeof(ip6_address_t)))
+    if (!BCMP(&addr6, &dhcpd_server->dhcpv6.gateway, sizeof(ip6_address_t)))
         return false;
     // 遍历已分配的列表，检查是否已有其他节点分配相同的 IP 地址
     // ist_for_each_entry(pos, head, member)
@@ -208,7 +208,7 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
             return true;
         }
     }
-    //生成新地址
+    // 生成新地址
     for (int count = 0; count < 1000; count++) {
         srand(time(NULL));
         ip6_address_t new_add;
@@ -218,6 +218,8 @@ PRIVATE bool dhcpv6_assign(packet_process_t *packet_process, struct vdhcpd_assig
                 continue;
             else if (start.ip_u8[i] < end.ip_u8[i]) {
                 for (int j = i; j < 16; j++) {
+                    if(end.ip_u8[j]==start.ip_u8[j])
+                        continue;
                     uint8_t u8_random_data = (uint8_t)(random() % (end.ip_u8[j] - start.ip_u8[j]));
                     new_add.ip_u8[j] += u8_random_data;
                 }
@@ -244,10 +246,9 @@ PRIVATE struct vdhcpd_assignment *dhcpv6_lease(packet_process_t *packet_process,
     time_t now = vdhcpd_time();
     // 主要是配置三个东西:ip,mac,租约
 
-    if (!a) {
+    if (!a) { 
         a = alloc_assignment(dhcpd_server->server_stats, 0);
-        assert(a);
-        BZERO(a, sizeof(struct vdhcpd_assignment));
+        assert(a); 
     }
     BCOPY(&packet_process->macaddr, &a->macaddr, sizeof(mac_address_t));
 
@@ -275,7 +276,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     struct dhcpv6_client_header *req = request->payload;
     const u8 reqmsg = request->v6.msgcode;
     struct vdhcpd_assignment *a = NULL;
-
+    time_t now = vdhcpd_time();
     struct dhcpv6_client_header rep;
     BZERO(&rep, sizeof(struct dhcpv6_client_header));
     u8 *cookie = &rep.options[0];
@@ -302,34 +303,46 @@ PUBLIC int server6_process(packet_process_t *packet_process)
 
     switch (reqmsg) {
     case DHCPV6_MSG_SOLICIT: {
+        if (a)
+            a->valid_until = now + MIN_RELEASE_INTERVAL;
         reply->v6.msgcode = realtime_info->v6.rapid_commit ? DHCPV6_MSG_REPLY : DHCPV6_MSG_ADVERTISE;
     } break;
     case DHCPV6_MSG_REQUEST: {
+        if (a)
+            a->valid_until = ((request->v6.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v6.leasetime));
         reply->v6.msgcode = DHCPV6_MSG_REPLY;
     } break;
     case DHCPV6_MSG_CONFIRM: {
+        if (a)
+            a->valid_until = ((request->v6.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v6.leasetime));
         reply->v6.msgcode = DHCPV6_MSG_REPLY;
     } break;
     case DHCPV6_MSG_RENEW: {
-        if(a)
-        reply->v6.msgcode = (a && a->leasetime) ? DHCPV6_MSG_REPLY : DHCPV6_MSG_RECONFIGURE;
+        if (a) {
+            reply->v6.msgcode = (a && a->leasetime) ? DHCPV6_MSG_REPLY : DHCPV6_MSG_RECONFIGURE;
+            a->valid_until = ((request->v6.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v6.leasetime));
+        }
     } break;
     case DHCPV6_MSG_REBIND: {
-        if(a)
-        reply->v6.msgcode = (a && a->leasetime) ? DHCPV6_MSG_REPLY : DHCPV6_MSG_RECONFIGURE;
+        if (a) {
+            reply->v6.msgcode = (a && a->leasetime) ? DHCPV6_MSG_REPLY : DHCPV6_MSG_RECONFIGURE;
+            a->valid_until = ((request->v6.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v6.leasetime));
+        }
     } break;
     case DHCPV6_MSG_RELEASE: {
+        if (a)
+            a->valid_until = now + MIN_RELEASE_INTERVAL;
         reply->v6.msgcode = DHCPV6_MSG_REPLY;
     } break;
     case DHCPV6_MSG_DECLINE: {
+        if (a)
+            a->valid_until = now + MIN_RELEASE_INTERVAL;
         reply->v6.msgcode = DHCPV6_MSG_REPLY;
     } break;
     case DHCPV6_MSG_RECONFIGURE:
         break;
     case DHCPV6_MSG_INFORMATION_REQUEST:
-#ifdef CLIB_DEBUG
-        x_log_warn("DHCPV6_MSG_INFORMATION_REQUEST");
-#endif // DEBUG
+ 
         reply->v6.msgcode = DHCPV6_MSG_REPLY;
         break;
     case DHCPV6_MSG_RELAY_FORW:
@@ -343,6 +356,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     default:
         break;
     }
+    x_log_warn("租约时间:%d.目前时间:%d",a->valid_until,now);
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_CLIENTID, realtime_info->v6.duid_len, realtime_info->v6.duid);
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_SERVERID, sizeof(server_duid), server_duid);
     if (realtime_info->v6.rapid_commit) dhcpv6_put(&rep, &cookie, DHCPV6_OPT_RAPID_COMMIT, 0, 0);
@@ -371,8 +385,8 @@ PUBLIC int server6_process(packet_process_t *packet_process)
                 reply->v6.msgcode = DHCPV6_MSG_REPLY;
                 dhcpv6_put(&rep, &cookie, DHCPV6_OPT_RAPID_COMMIT, 0, 0);
             } else if (realtime_info->v6.reqopts[i] == DHCPV6_OPT_LIFETIME) {
-                if(a)
-                dhcpv6_put(&rep, &cookie, DHCPV6_OPT_LIFETIME, 4, &a->leasetime);
+                if (a)
+                    dhcpv6_put(&rep, &cookie, DHCPV6_OPT_LIFETIME, 4, &a->leasetime);
             }
         }
     }
@@ -443,14 +457,14 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     BCOPY(packet->payload, payload, packet->payload_len);
     length += packet->payload_len;
 
-    //封装UDP Header
+    // 封装UDP Header
     length += sizeof(struct udphdr);
     pUDPHeader->len = htons(length);
     pUDPHeader->dest = dest.sin6_port;
     pUDPHeader->source = htons(DHCPV6_SERVER_PORT);
     pUDPHeader->check = 0;
 
-    //封装IP Header
+    // 封装IP Header
     pIP6Header->ip6_vfc = 0x6e;
     pIP6Header->ip6_plen = htons(length);
     pIP6Header->ip6_nxt = IPPROTO_UDP;
@@ -458,10 +472,10 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     pIP6Header->ip6_src = dhcpd_server->dhcpv6.gateway.ip_u64[0] ? dhcpd_server->dhcpv6.gateway.addr : dhcpd_server->iface.ipaddr6.addr;
     pIP6Header->ip6_dst = dest.sin6_addr;
     length += sizeof(struct ip6_hdr);
-    WinDivertHelperCalcChecksums(pIP6Header, length, 0); //计算校验和
+    WinDivertHelperCalcChecksums(pIP6Header, length, 0); // 计算校验和
 
 #ifndef VERSION_VNAAS
-    //封装IPC Header
+    // 封装IPC Header
     ipcsharehdr->process = DEFAULT_DHCPv6_PROCESS;
     ipcsharehdr->code = CODE_REPLY; // 1
     ipcsharehdr->driveid = dhcpd_server->iface.driveid;
@@ -477,7 +491,7 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     ipcsharehdr->ethhdr.ether_type = htons(ETH_P_IPV6);
     length += sizeof(ipcshare_hdr_t);
 #else
-    //封装Ether Header
+    // 封装Ether Header
     u16 l3_offset = 0;
     /*if (DHCPV4_FLAGS_BROADCAST(rep)) memset(ethhdr->ether_dhost, 0xFF, ETH_ALEN);
     else */
@@ -501,7 +515,7 @@ PRIVATE int server6_send_reply_packet(packet_process_t *packet_process, dhcp_pac
         }
     }
 
-    //封装IPC Header
+    // 封装IPC Header
     ephdr->path.field = UIPC_FIELD_DHCP_SERVER;
     ephdr->path.act = UIPC_ACT_WORK_MSG;
     ephdr->sw_rx_dbid = dhcpd_server->nLineID;
