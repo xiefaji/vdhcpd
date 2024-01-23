@@ -274,6 +274,9 @@ PUBLIC void dhcpd_server_check(void *cfg)
     while (knode && knode->data) {
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
         struct key_node *try_knode = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->nLineID, dhcpd_server);
+#ifdef CLIB_DEBUG
+    x_log_warn("载入线路ID:%d,线路开启状态:%d", dhcpd_server->nLineID,dhcpd_server->nEnabled);
+#endif // DEBUG
         assert(!try_knode);
         //加载静态租约
         dhcpd_lease_main_reload(dhcpd_server->staticlease_main, dhcpd_server->nLineID);

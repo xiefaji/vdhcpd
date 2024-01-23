@@ -188,9 +188,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     //    }
 
     if (msgcode == DHCPV4_MSG_DISCOVER || msgcode == DHCPV4_MSG_REQUEST) {//租约申请/续租
-    #ifdef CLIB_DEBUG
-    x_log_warn("DISCOVER || REQUEST MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
-    #endif // DEBUG 
+ 
 
         bool assigned = !!a;
 
@@ -213,6 +211,9 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                     a->valid_until = 0;//静态租约
                     //if (staticlease->leasetime)
                     //    a->leasetime = staticlease->leasetime;
+                #ifdef CLIB_DEBUG
+                    x_log_warn("静态租约删租约消息");
+                #endif // DEBUG
                 }
 
                 assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
@@ -313,7 +314,9 @@ PUBLIC int server4_process(packet_process_t *packet_process)
     if (reqmsg != DHCPV4_MSG_DISCOVER && reqmsg != DHCPV4_MSG_REQUEST && reqmsg != DHCPV4_MSG_INFORM
             && reqmsg != DHCPV4_MSG_DECLINE && reqmsg != DHCPV4_MSG_RELEASE)
         return -1;
-
+    #ifdef CLIB_DEBUG
+    x_log_warn("报文:%s MAC:"MACADDRFMT".",dhcpv4_msg_to_string(reqmsg), MACADDRBYTES(packet_process->macaddr));
+    #endif // DEBUG 
     //租约校验/分配
     if (reqmsg != DHCPV4_MSG_INFORM)
         a = dhcpv4_lease(packet_process, reqmsg);

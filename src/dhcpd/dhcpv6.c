@@ -287,8 +287,9 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     ip6_address_t addr6, prefix6;
     BZERO(&addr6, sizeof(ip6_address_t));
     BZERO(&prefix6, sizeof(ip6_address_t));
-
-    if (reqmsg != DHCPV6_MSG_INFORMATION_REQUEST) {
+    if(ENABLE_IPV6_SLAAC(dhcpd_server)&&reqmsg!=DHCPV6_MSG_INFORMATION_REQUEST)
+        return 0;
+    if ((!ENABLE_IPV6_SLAAC(dhcpd_server)) && (!ENABLE_IPV6_PD(dhcpd_server))) {
         a = dhcpv6_lease(packet_process, reqmsg);
         if (a) BCOPY(&a->addr6, &addr6, sizeof(ip6_address_t));
     }
@@ -356,11 +357,19 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     default:
         break;
     }
-    x_log_warn("租约时间:%d.目前时间:%d",a->valid_until,now);
+    #ifdef CLIB_DEBUG
+    if(a)
+        x_log_warn("租约时间:%d.目前时间:%d",a->valid_until,now);
+        x_log_warn("v6:接收报文:%s,回复报文:%s",dhcpv6_msg_to_string(reqmsg),dhcpv6_msg_to_string(reply->v6.msgcode));
+    #endif // DEBUG 
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_CLIENTID, realtime_info->v6.duid_len, realtime_info->v6.duid);
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_SERVERID, sizeof(server_duid), server_duid);
     if (realtime_info->v6.rapid_commit) dhcpv6_put(&rep, &cookie, DHCPV6_OPT_RAPID_COMMIT, 0, 0);
     if (ENABLE_IPV6_SLAAC(dhcpd_server) && (reqmsg == DHCPV6_MSG_INFORMATION_REQUEST)) {
+    #ifdef CLIB_DEBUG
+    if(a)
+        x_log_warn("添加information replay内容"); 
+    #endif // DEBUG 
         for (u32 i = 1; i < realtime_info->v6.reqopts_len; i += 2) {
             if (realtime_info->v6.reqopts[i] == DHCPV6_OPT_DNS_SERVERS)
                 dhcpv6_put(&rep, &cookie, DHCPV6_OPT_DNS_SERVERS, 32, dhcpd_server->SLAAC.dns);
@@ -412,6 +421,9 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     BCOPY(req->transaction_id, rep.transaction_id, 3);
     reply->payload = &rep;
     reply->payload_len = PACKET6_SIZE(&rep, cookie);
+    #ifdef CLIB_DEBUG
+        x_log_warn("v6发送报文");
+    #endif // DEBUG
     return server6_send_reply_packet(packet_process, reply, dest);
 }
 

@@ -49,7 +49,7 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
 
         packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.realtime_info->lineid);
         if (!packet_process.dhcpd_server){
-            x_log_warn("DHCP服务查找失败 id:%d",packet_process.realtime_info->lineid);     
+            x_log_warn("DHCPv4中继服务查找失败 id:%d",packet_process.realtime_info->lineid);     
             continue;//DHCP服务查找失败
         } 
 
@@ -188,6 +188,9 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
 //RX
 PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
 {
+#ifdef CLIB_DEBUG
+    x_log_warn("接收到v4中继报文");
+#endif // DEBUG
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     realtime_info_t *realtime_info = packet_process->realtime_info;
     dhcp_packet_t *request = &packet_process->request;
@@ -301,7 +304,7 @@ PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
     ipctaskhdr->byte_len = length;
     length += sizeof(uipc_task_t);
 #endif
-
+    
     packet_save_log(packet_process, (struct dhcpv4_message *)request->relay_payload, request->v4.msgcode, "发送报文[v4中继][C]");
     return ipc_send_data(packet_process, buffer, length);
 }
