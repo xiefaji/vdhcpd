@@ -484,7 +484,7 @@ PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRe
         x_log_warn("处理dhcpv6报文");
     #endif // DEBUG
     if (!ENABLE_DHCP_IPV6(dhcpd_server)){
-        x_log_warn("服务未启动ID:%d,able",dhcpd_server->nID,dhcpd_server->nEnabled);
+        x_log_warn("服务未启动ID:%d,able",dhcpd_server->nID);
         return -1;
     }
          

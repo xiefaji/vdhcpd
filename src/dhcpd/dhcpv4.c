@@ -125,6 +125,7 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
     if (start <= IPV4_NTOHL(raddr) && IPV4_NTOHL(raddr) <= end ) {
         struct vdhcpd_assignment *try_assigin=find_assignment_by_ipaddr(packet_process, raddr);
          if( (!try_assigin)|| BCMP(&try_assigin->macaddr, &a->macaddr, sizeof(mac_address_t))){
+            
             assigned = dhcpv4_insert_assignment(packet_process, a, raddr);/*固定IP地址*/
             if (assigned) { 
                 x_log_debug("接入服务[分配地址]: 固定IP地址 "IPV4FMT".", IPV4BYTES(a->addr));
@@ -445,6 +446,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
     reply->payload_len = PACKET4_SIZE(&rep, cookie);
 #ifdef CLIB_DEBUG
     x_log_warn("发送报文");
+    x_log_warn("payload_len:%d",reply->payload_len);
 #endif // DEBUG 
     return server4_send_reply_packet(packet_process, reply, dest);
 }
@@ -455,7 +457,7 @@ PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     realtime_info_t *realtime_info = packet_process->realtime_info;
     struct dhcpv4_message *rep = packet->payload;
 
-    unsigned char buffer[MAXBUFFERLEN+1]={0};
+    unsigned char buffer[MAXBUFFERLEN+1]={0}; 
     unsigned int offset = 0, length = 0;
 #ifndef VERSION_VNAAS
     ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
