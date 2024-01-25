@@ -9,7 +9,7 @@
 
 #include "share/defines.h"
 #include "windivert.h"
-
+#define barrier() __asm__ __volatile__("" ::: "memory")
 /*IPv4 Defines*/
 #define WINDIVERT_IPHDR_GET_FRAGOFF(hdr)    (((hdr)->frag_off) & 0xFF1F)
 #define WINDIVERT_IPHDR_GET_MF(hdr)         ((((hdr)->frag_off) & 0x0020) != 0)
@@ -118,7 +118,7 @@ PRIVATE unsigned short WinDivertCalcChecksum(void *pseudo_header,unsigned short 
     register size_t len16 = pseudo_header_len >> 1;
     register unsigned int sum = 0;
     size_t i;
-
+    barrier();
     // Pseudo header:
     for (i = 0; i < len16; i++)
         sum += (unsigned int)data16[i];
