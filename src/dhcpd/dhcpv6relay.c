@@ -167,7 +167,7 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 //TX
 PUBLIC int relay6_send_request_packet(packet_process_t *packet_process)
 {
-        #ifdef CLIB_DEBUG
+    #ifdef CLIB_DEBUG
         x_log_warn("v6中继处理");
     #endif // DEBUG
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
