@@ -47,7 +47,9 @@ PUBLIC bool MysqlBase_OpenDB(PMYSQLBASE pDB,const char *username,const char *pas
     if (!mysql_real_connect(pDB->m_con,serverip,username,password,dbname,port,NULL,0)) {
         mysql_thread_end();
         real_mutex_unlock();
+        #ifdef CLIB_DEBUG
         x_log_warn("%s : 数据库连接失败[%s].",__FUNCTION__,mysql_error(pDB->m_con));
+        #endif // DEBUG 
         return false;
     }
     real_mutex_unlock();
