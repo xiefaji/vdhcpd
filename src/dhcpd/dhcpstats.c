@@ -123,7 +123,7 @@ PUBLIC void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const
 
     struct vdhcpd_assignment *a, *n;
     list_for_each_entry_safe(a, n, lists, head) {
-        if (BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t)))
+        if (!BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t)))
             a->valid_until = now;
     }
 }

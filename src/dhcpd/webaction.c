@@ -1,5 +1,6 @@
 #include <sys/un.h>
 #include "dhcpd.h"
+#include "share/xlog.h"
 
 //filed
 #define XSWEB_FIELD_DHCP_RELEASE_LEASE		1086   //IP释放

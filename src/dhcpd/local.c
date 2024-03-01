@@ -3,7 +3,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 PRIVATE receive_bucket_t *receive_bucket = NULL;
-
+ 
 PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
@@ -56,11 +56,8 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
-    static u32 last_assignment;
-    if (CMP_COUNTER(last_assignment, 3)) {
-        SET_COUNTER(last_assignment);
-        server_stats_main_maintain();
-    }
+ 
+ 
 
     //接收数据包并处理
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
