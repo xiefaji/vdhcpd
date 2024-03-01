@@ -195,7 +195,7 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
     if (vdm->reload_vdhcpd) { //配置重载
         __sync_fetch_and_and(&vdm->reload_vdhcpd, 0);
         vdhcpd_cfg_t *cfg_main = vdhcpd_cfg_reload();
-        vdhcpd_cfg_recycle(vdhcpd_cfg_reload ,pRecycleTrash);
+        vdhcpd_cfg_recycle(vdm->cfg_main ,pRecycleTrash);
         vdm->cfg_main = cfg_main;
     } else if (CMP_COUNTER(last_update, 8)) { //局部参数动态更新
       

@@ -3,7 +3,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 PRIVATE receive_bucket_t *receive_bucket = NULL;
- 
+
 PUBLIC int local_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
