@@ -55,10 +55,8 @@ PUBLIC void dhcpd_server_reload(void *cfg)
      
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -66,7 +64,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
-    x_log_warn("dhcp服务数:%d\n", CSqlRecorDset_GetRecordCount(&Query));
+    x_log_debug("dhcp服务数:%d\n", CSqlRecorDset_GetRecordCount(&Query));
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) { 
         u16 val16;
         u32 val32;
@@ -242,10 +240,8 @@ PRIVATE void dhcpd_server_reload_serverid(struct key_tree *key_serverid, const u
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -275,10 +271,8 @@ PUBLIC void dhcpd_server_check(void *cfg)
     struct key_node *knode = key_first(&cfg_main->key_servers);
     while (knode && knode->data) {
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
-        struct key_node *try_knode = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->nLineID, dhcpd_server);
-#ifdef CLIB_DEBUG
-    x_log_warn("载入线路ID:%d,线路开启状态:%d", dhcpd_server->nLineID,dhcpd_server->nEnabled);
-#endif // DEBUG
+        struct key_node *try_knode = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->nLineID, dhcpd_server); 
+        x_log_debug("载入线路ID:%d,线路开启状态:%d", dhcpd_server->nLineID,dhcpd_server->nEnabled); 
         assert(!try_knode);
         //加载静态租约
         dhcpd_lease_main_reload(dhcpd_server->staticlease_main, dhcpd_server->nLineID);
@@ -378,10 +372,8 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -431,10 +423,8 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -522,10 +512,8 @@ PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_qu
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -579,10 +567,8 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -632,10 +618,8 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};
@@ -676,10 +660,8 @@ PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
     MYSQLRECORDSET Query = {0};

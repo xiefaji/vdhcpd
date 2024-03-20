@@ -34,7 +34,7 @@ PUBLIC int api_main_start(void *p, trash_queue_t *pRecycleTrash)
      if (retlen <= 0) {
          int err = errno;
          if (err != EAGAIN && err != EINTR)
-             x_log_warn("%s : 数据接收失败:%s", __FUNCTION__, strerror(errno));
+             x_log_debug("%s : 数据接收失败:%s", __FUNCTION__, strerror(errno));
          return 0;
      }
      buffer[retlen] = '\0';

@@ -62,9 +62,6 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
     //接收数据包并处理
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
     for (int idx = 0; idx < receive_bucket->count; ++idx) {
-#ifdef CLIB_DEBUG
-        x_log_warn("接收到报文");
-#endif
         packet_process_t packet_process;
         BZERO(&packet_process, sizeof(packet_process_t));
         struct mmsghdr *packets = &receive_bucket->receives.packets[idx];
@@ -75,32 +72,26 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
         packet_do_dpi(&packet_process);
         packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.dpi.lineid);
         if (!packet_process.dhcpd_server){
-            x_log_warn("DHCP服务查找失败,查找id %d",packet_process.dpi.lineid);
+            x_log_debug("DHCP服务查找失败,查找id %d",packet_process.dpi.lineid);
             continue;//DHCP服务查找失败
             }
 
         //报文基础解析
         if (packet_parse(&packet_process) < 0){
-            x_log_warn("报文基础解析失败");
+            x_log_debug("报文基础解析失败");
             continue;}
 
         //DHCP服务参数匹配
         if (packet_match_server(&packet_process) < 0){
-             x_log_warn("DHCP服务参数不匹配");
+             x_log_debug("DHCP服务参数不匹配");
             continue;}
 
         //报文处理
         switch (packet_process.dpi.process) {
         case DEFAULT_DHCPv4_PROCESS:
             packet_process4(&packet_process, pRecycleTrash);
-            #ifdef CLIB_DEBUG
-            x_log_warn("DHCPv4报文处理");
-            #endif
             break;
         case DEFAULT_DHCPv6_PROCESS:
-            #ifdef CLIB_DEBUG
-            x_log_warn("DHCPv6报文处理");
-            #endif
             packet_process6(&packet_process, pRecycleTrash);
             break;
         }
@@ -186,10 +177,8 @@ PRIVATE int packet_do_dpi(packet_process_t *packet_process)
     packet_process->dpi.l3 = (unsigned char *)&ephdr->data[offset];
     packet_process->dpi.l3len = ephdr->data_len - offset;
     request->ethhdr = ethhdr;
- #endif
- #ifdef CLIB_DEBUG
-    x_log_warn("报文信息:线路ID: %d ovlan: %d vlan: %d vlanproto: %d %d",packet_process->dpi.lineid,packet_process->dpi.vlanid[0],packet_process->dpi.vlanid[1],packet_process->dpi.vlanproto[0],packet_process->dpi.vlanproto[1]);
- #endif // DEBUG
+ #endif 
+    x_log_debug("报文信息:线路ID: %d ovlan: %d vlan: %d vlanproto: %d %d",packet_process->dpi.lineid,packet_process->dpi.vlanid[0],packet_process->dpi.vlanid[1],packet_process->dpi.vlanproto[0],packet_process->dpi.vlanproto[1]);
     return 0;
 }
 
@@ -214,7 +203,7 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
         request->payload_len = request->l3len - iphdr_len - sizeof(struct udphdr);
 
         if (l3len < request->l3len || l4len < request->l4len || iphdr_len < 20 || ((l4len + iphdr_len) != l3len)) {
-            x_log_warn("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv4_PROCESS,
+            x_log_debug("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv4_PROCESS,
                       l3len, request->l3len, l4len, request->l4len, iphdr_len);
             retcode = -1;
         }
@@ -231,14 +220,14 @@ PRIVATE int packet_parse(packet_process_t *packet_process)
         request->payload_len = request->l3len - iphdr_len - sizeof(struct udphdr);
 
         if (l3len < request->l3len || l4len < request->l4len || iphdr_len < sizeof(struct ip6_hdr) || ((l4len + iphdr_len) != l3len)) {
-            x_log_warn("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv6_PROCESS,
+            x_log_debug("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv6_PROCESS,
                       l3len, request->l3len, l4len, request->l4len, iphdr_len);
             retcode = -1;
         }
     } break;
     default:
         retcode = -1;
-        x_log_warn("%s:%d 未识别Processl数据类型[%u][%u].", __FUNCTION__, __LINE__, packet_process->dpi.process, errno);
+        x_log_debug("%s:%d 未识别Processl数据类型[%u][%u].", __FUNCTION__, __LINE__, packet_process->dpi.process, errno);
         break;
     }
 
@@ -251,24 +240,24 @@ PRIVATE int packet_match_server(packet_process_t *packet_process)
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
 
     if (!dhcpd_server->nEnabled){
-        x_log_warn("DHCP服务停用线路ID:%d",dhcpd_server->nLineID);
+        x_log_debug("DHCP服务停用线路ID:%d",dhcpd_server->nLineID);
         return -1;//DHCP服务停用
         }
 
     if ((!ENABLE_DHCP_IPV4(dhcpd_server)) && (!ENABLE_DHCP_IPV6(dhcpd_server))){
-        x_log_warn("IPV4/IPV6模式均停用ID:%d",dhcpd_server->nLineID);
+        x_log_debug("IPV4/IPV6模式均停用ID:%d",dhcpd_server->nLineID);
         return -1;//IPV4/IPV6模式均停用
     } 
 
 #ifndef VERSION_VNAAS
     if (dhcpd_server->iface.driveid != packet_process->dpi.driveid){
-        x_log_warn("监听物理网卡不匹配ID:%d",dhcpd_server->nLineID);
+        x_log_debug("监听物理网卡不匹配ID:%d",dhcpd_server->nLineID);
         return -1;//监听物理网卡不匹配
         }
 #endif
 
     if (!xEXACTVLAN_Match(dhcpd_server->pEXACTVLAN, packet_process->dpi.vlanid[0], packet_process->dpi.vlanid[1])){
-        x_log_warn("监听VLAN/QINQ不匹配ID:%d",dhcpd_server->nLineID);
+        x_log_debug("监听VLAN/QINQ不匹配ID:%d",dhcpd_server->nLineID);
          return -1;//监听VLAN/QINQ不匹配
     }
         
@@ -285,7 +274,7 @@ PRIVATE int packet_deepin_parse4(packet_process_t *packet_process, trash_queue_t
 
     if (request->payload_len < offsetof(struct dhcpv4_message, options) + 4 ||
             req->op != DHCPV4_BOOTREQUEST || req->hlen != ETH_ALEN){
-            x_log_warn("v4报文头解析失败");
+            x_log_debug("v4报文头解析失败");
             return -1;
             } 
 
@@ -369,7 +358,7 @@ PRIVATE int packet_process4(packet_process_t *packet_process, trash_queue_t *pRe
     if (dhcpd_server_match_macaddr(dhcpd_server, packet_process->macaddr))
         return -1;
 #ifdef CLIB_DEBUG
-    x_log_warn("v4服务器:%d",ENABLE_IPV4_SERVER(dhcpd_server));
+    x_log_debug("v4服务器:%d",ENABLE_IPV4_SERVER(dhcpd_server));
 #endif // DEBUG
     //报文分业务处理
     if (ENABLE_IPV4_RELAY(dhcpd_server)) {//中继模式
@@ -477,24 +466,22 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
 PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRecycleTrash)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
-    #ifdef CLIB_DEBUG
-        x_log_warn("处理dhcpv6报文");
-    #endif // DEBUG
+
     if (!ENABLE_DHCP_IPV6(dhcpd_server)){
-        x_log_warn("服务未启动ID:%d,able",dhcpd_server->nID);
+        x_log_debug("服务未启动ID:%d,able",dhcpd_server->nID);
         return -1;
     }
          
 
     //报文深度解析
     if (packet_deepin_parse6(packet_process, pRecycleTrash)){
-        x_log_warn("报文解析失败ID:%d",dhcpd_server->nID);
+        x_log_debug("报文解析失败ID:%d",dhcpd_server->nID);
         return -1;
     } 
 
     //黑/白名单匹配
     if (dhcpd_server_match_macaddr(dhcpd_server, packet_process->macaddr)){
-        x_log_warn("黑/白名单匹配失败ID:%d",dhcpd_server->nID);
+        x_log_debug("黑/白名单匹配失败ID:%d",dhcpd_server->nID);
         return -1;
     } 
     #ifdef CLIB_DEBUG
@@ -502,14 +489,8 @@ PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRe
     #endif // DEBUG
     //报文分业务处理
     if (ENABLE_IPV6_RELAY(dhcpd_server)) {//中继模式
-    #ifdef CLIB_DEBUG
-        x_log_warn("dhcpv6中继模式");
-    #endif // DEBUG
         relay6_send_request_packet(packet_process);
     } else if (ENABLE_IPV6_SERVER(dhcpd_server)) {//服务器模式
-    #ifdef CLIB_DEBUG
-        x_log_warn("dhcpv6服务模式");
-    #endif // DEBUG
         server6_process(packet_process);//wuao
     }
     return 0;

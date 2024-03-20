@@ -48,7 +48,7 @@ typedef struct {
         ip4_address_t gateway;//网关地址 netbit
         ip4_address_t netmask;//子网掩码 netbit
         ip4_address_t broadcast;//广播地址 netbit
-        ip4_address_t dns[2];//DNS地址 netbit
+        ip4_address_t dns[2];//DNS地址 netbit 
         ip4_address_t windns[2];//WINDNS地址 netbit
     } dhcpv4;
 

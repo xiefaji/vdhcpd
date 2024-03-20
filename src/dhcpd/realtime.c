@@ -353,6 +353,7 @@ PUBLIC void stats_main_maintain(vdhcpd_stats_t *stats_main, trash_queue_t *pRecy
         if (realtime_info->update_db4) {
             __sync_fetch_and_and(&realtime_info->update_db4, 0);
             realtime_info_update_lease4(realtime_info);
+            
         }
 
         if (realtime_info->update_db6) {

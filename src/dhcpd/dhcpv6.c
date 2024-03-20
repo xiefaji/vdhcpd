@@ -359,10 +359,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     }
     #ifdef CLIB_DEBUG
     if(a)
-#ifdef CLIB_DEBUG
-        x_log_warn("租约时间:%ld.目前时间:%ld",a->valid_until,now);
-        x_log_warn("v6:接收报文:%s,回复报文:%s",dhcpv6_msg_to_string(reqmsg),dhcpv6_msg_to_string(reply->v6.msgcode));
-#endif // DEBUG
+
      #endif // DEBUG 
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_CLIENTID, realtime_info->v6.duid_len, realtime_info->v6.duid);
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_SERVERID, sizeof(server_duid), server_duid);

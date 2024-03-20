@@ -58,7 +58,6 @@ PRIVATE void signal_callback(int num)
         break;
     case SIGINT:
     case SIGTERM:
-    
         x_log_warn("End %s 正常退出. version [%s] signal[%d]..", PACKAGE_NAME"["PACKAGE_MODULES"]", PACKAGE_VERSION, num);
         xthread_shutdown();
         vdhcpd_shutdown();
@@ -109,6 +108,7 @@ int main(int argc, char *argv[])
     xlog_default = openxlog(PACKAGE_NAME"["PACKAGE_MODULES"]", xLOG_DEFAULT, LOG_CONS|LOG_NDELAY, LOG_DAEMON);
     xlog_set_level(NULL, xLOG_DEST_SYSLOG, LOG_ERR);
     xlog_set_level(NULL, xLOG_DEST_STDOUT, g_verbose);
+    xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
     xlog_set_file(NULL, path_cfg.logfile, LOG_WARNING);
 
     database_init();

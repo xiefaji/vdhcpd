@@ -1,3 +1,4 @@
+#include "dhcpd/dhcpv4.h"
 #include <resolv.h>
 #include "dhcpd.h"
 #include "share/defines.h"
@@ -47,7 +48,46 @@ PRIVATE void dhcpv4_free_assignment(struct vdhcpd_assignment *a)
     //    if (a->fr_ip)
     //        dhcpv4_fr_stop(a);
 }
+PUBLIC bool send_dhcpv4_release(realtime_info_t *realtime_info){
+    packet_process_t *packet_process; 
+    packet_process->realtime_info=realtime_info;
+    dhcp_packet_t *reply = &packet_process->reply;
+    struct dhcpv4_message rep = {
+        .op = DHCPV4_BOOTREPLY,
+                .htype = 0x01,
+                .hlen = 6,
+                .hops = 0,
+                .xid = getpid(),//用pid代替一下
+                .secs = 0,
+                .flags = 0,
+                .ciaddr =0,
+                .giaddr = 0,
+                .siaddr = 0,
+    };
+    BCOPY(&realtime_info->v4.macaddr, rep.chaddr, sizeof(rep.chaddr));
+    rep.options[0] = 0x63;
+    rep.options[1] = 0x82;
+    rep.options[2] = 0x53;
+    rep.options[3] = 0x63;
+    u8 *cookie = &rep.options[4];
+    reply->v4.msgcode = DHCPV4_MSG_RELEASE;
 
+
+
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_MESSAGE, 1, &reply->v4.msgcode );//release
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_SERVERID, 4, &realtime_info->v4.gipaddr);
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_CLIENT_IDENTIFIER, 4, &realtime_info->v4.ipaddr);//客户端ip
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_END, 0, NULL);
+
+    struct sockaddr_in dest = { .sin_family = AF_INET,
+                .sin_addr.s_addr = realtime_info->v4.gipaddr.address,
+                .sin_port = realtime_info->v4.ipaddr.address,};
+ 
+
+    reply->payload = &rep;
+    reply->payload_len = PACKET4_SIZE(&rep, cookie);
+    return server4_send_reply_packet(packet_process, reply, dest);
+}
 PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip4_address_t addr/*netbit*/)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
@@ -153,10 +193,8 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
             continue;
 
         assigned = dhcpv4_insert_assignment(packet_process, a, n_try);/*动态IP*/
-        if (assigned) {
-            #ifdef CLIB_DEBUG
-            x_log_warn("接入服务[分配地址]: 动态IP地址 "IPV4FMT" (try %u of %u).", IPV4BYTES(a->addr), i + 1, count);
-            #endif // DEBUG 
+        if (assigned) { 
+            x_log_debug("接入服务[分配地址]: 动态IP地址 "IPV4FMT" (try %u of %u).", IPV4BYTES(a->addr), i + 1, count); 
             return true;
         }
     }
@@ -174,10 +212,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     dhcpd_staticlease_t *staticlease = dhcpd_server_staticlease_search_macaddr(dhcpd_server, packet_process->macaddr, 4);
     time_t now = vdhcpd_time();
 
-    if (staticlease && a && BCMP(&staticlease->u.v4.ipaddr, &a->ipaddr, sizeof(ip4_address_t))) {
-        #ifdef CLIB_DEBUG
-        x_log_warn("静态租约释放租约变量");
-        #endif
+    if (staticlease && a && BCMP(&staticlease->u.v4.ipaddr, &a->ipaddr, sizeof(ip4_address_t))) { 
         free_assignment(a); 
         a = NULL;
     }
@@ -212,29 +247,16 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                     a->valid_until = 0;//静态租约
                     //if (staticlease->leasetime)
                     //    a->leasetime = staticlease->leasetime;
-                #ifdef CLIB_DEBUG
-                    x_log_warn("静态租约删租约消息");
-                #endif // DEBUG
                 }
 
-                assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
-                #ifdef CLIB_DEBUG
-                if(!assigned){
-                    x_log_warn(" 未分配到ip");
-                }else{
-                    x_log_warn(" 分配到ip");
-                }
-                #endif // DEBUG
+                assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr); 
  
             }
         } else if ((IPv4_SUBNET(&a->addr, &dhcpd_server->dhcpv4.netmask) != IPv4_SUBNET(&dhcpd_server->dhcpv4.startip, &dhcpd_server->dhcpv4.netmask)) && !(a->flags & OAF_STATIC)) {
             //动态租约终端且与接入服务网段不匹配
             dhcpd_server_stats_lock(server_stats);
             list_del_init(&a->head);
-            dhcpd_server_stats_unlock(server_stats);
-            #ifdef CLIB_DEBUG
-            x_log_warn(" 子网掩码问题没有发送报文");
-            #endif // DEBUG 
+            dhcpd_server_stats_unlock(server_stats); 
             a->addr.address = INADDR_ANY;
             assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
         }
@@ -260,10 +282,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 a->valid_until = ((request->v4.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v4.leasetime));
             }
         } else if ((!assigned) && a) {
-            /* Cleanup failed assignment */
-            #ifdef CLIB_DEBUG
-            x_log_warn("删除租约");
-            #endif
+            /* Cleanup failed assignment */ 
             free_assignment(a);
             a = NULL;
         }
@@ -314,10 +333,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
 
     if (reqmsg != DHCPV4_MSG_DISCOVER && reqmsg != DHCPV4_MSG_REQUEST && reqmsg != DHCPV4_MSG_INFORM
             && reqmsg != DHCPV4_MSG_DECLINE && reqmsg != DHCPV4_MSG_RELEASE)
-        return -1;
-    #ifdef CLIB_DEBUG
-    x_log_warn("报文:%s MAC:"MACADDRFMT".",dhcpv4_msg_to_string(reqmsg), MACADDRBYTES(packet_process->macaddr));
-    #endif // DEBUG 
+        return -1; 
     //租约校验/分配
     if (reqmsg != DHCPV4_MSG_INFORM)
         a = dhcpv4_lease(packet_process, reqmsg);
@@ -381,6 +397,8 @@ PUBLIC int server4_process(packet_process_t *packet_process)
 
         realtime_info->v4.leasetime = request->v4.leasetime;
         realtime_info->v4.ipaddr = rep.yiaddr;
+        realtime_info->v4.gipaddr = req->giaddr;
+        BCOPY(&packet_process->macaddr,&realtime_info->v4.macaddr,sizeof(mac_address_t));
         if (reply->v4.msgcode == DHCPV4_MSG_ACK) {
             SET_COUNTER(realtime_info->updatetick);
             realtime_info->flags |= RLTINFO_FLAGS_SERVER4;
@@ -389,10 +407,8 @@ PUBLIC int server4_process(packet_process_t *packet_process)
             __sync_fetch_and_add(&realtime_info->update_db4, 1);
         }
     }else
-    {
-        #ifdef CLIB_DEBUG
-        x_log_warn("租约不存在:MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr));
-        #endif // DEBUG 
+    { 
+        x_log_debug("租约不存在:MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr)); 
     }
 
     if (dhcpd_server->iface.mtu) {
@@ -444,10 +460,6 @@ PUBLIC int server4_process(packet_process_t *packet_process)
 
     reply->payload = &rep;
     reply->payload_len = PACKET4_SIZE(&rep, cookie);
-#ifdef CLIB_DEBUG
-    x_log_warn("发送报文");
-    x_log_warn("payload_len:%d",reply->payload_len);
-#endif // DEBUG 
     return server4_send_reply_packet(packet_process, reply, dest);
 }
 

@@ -49,7 +49,7 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
 
         packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.realtime_info->lineid);
         if (!packet_process.dhcpd_server){
-            x_log_warn("DHCPv4中继服务查找失败 id:%d",packet_process.realtime_info->lineid);     
+            x_log_debug("DHCPv4中继服务查找失败 id:%d",packet_process.realtime_info->lineid);     
             continue;//DHCP服务查找失败
         } 
 
@@ -74,7 +74,7 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
     //查找终端信息
     realtime_info_t *realtime_info = packet_process->realtime_info = realtime_search(packet_process);
     if (!realtime_info){
-        x_log_warn("实时租约信息不存在");
+        x_log_debug("实时租约信息不存在");
         return -1;
     } 
 
@@ -188,9 +188,6 @@ PUBLIC int relay4_send_request_packet(packet_process_t *packet_process)
 //RX
 PUBLIC int relay4_send_reply_packet(packet_process_t *packet_process)
 {
-#ifdef CLIB_DEBUG
-    x_log_warn("接收到v4中继报文");
-#endif // DEBUG
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     realtime_info_t *realtime_info = packet_process->realtime_info;
     dhcp_packet_t *request = &packet_process->request;

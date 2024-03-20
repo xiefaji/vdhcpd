@@ -80,11 +80,9 @@ PUBLIC void server_stats_main_maintain()
 
         //IPv4实时租约
         list_for_each_entry_safe(a, n, &server_stats->dhcpv4_assignments, head) {
-            if ((!INFINITE_VALID(a->valid_until)) && a->valid_until < now){
-            #ifdef CLIB_DEBUG
-                x_log_warn("释放租约");
-            #endif
-                free_assignment(a);
+            if ((!INFINITE_VALID(a->valid_until)) && a->valid_until < now){ 
+                x_log_debug("释放租约"); 
+                free_assignment(a); 
                 }
         }
 

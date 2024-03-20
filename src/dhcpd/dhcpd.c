@@ -27,13 +27,10 @@ PUBLIC int database_init()
 PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
 {
     MyDBOp_Init(pDBHandle);
-    if (!MyDBOp_OpenDB(pDBHandle, cfg_mysql.user, cfg_mysql.pass, dbname, cfg_mysql.ip, cfg_mysql.port)) {
-        #ifdef CLIB_DEBUG
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
-        #endif // DEBUG 
+    if (!MyDBOp_OpenDB(pDBHandle, cfg_mysql.user, cfg_mysql.pass, dbname, cfg_mysql.ip, cfg_mysql.port)) { 
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return -1;
-    }
-    x_log_info("%s:%d 数据库连接成功[%s].", __FUNCTION__, __LINE__, dbname);
+    } 
     MyDBOp_ExecSQL_1(pDBHandle, "set names utf8");
 
     return 0;
@@ -149,7 +146,7 @@ PRIVATE void vdhcpd_starttime(vdhcpd_main_t *vdm)
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, dbname) < 0) {
         MyDBOp_Destroy(&DBHandle);
-        x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, dbname);
         return;
     }
     MyDBOp_ExecSQL(&DBHandle, sql);

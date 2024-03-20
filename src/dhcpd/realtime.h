@@ -24,6 +24,7 @@ typedef struct {
     u16 sessionid;
     struct {
         ip4_address_t ipaddr;//客户端IP地址 netbit
+        ip4_address_t gipaddr;
         char hostname[MAXNAMELEN+1];//12
         char reqopts[MAXNAMELEN+1];//55
         char vendorname[MAXNAMELEN+1];//60
@@ -33,6 +34,7 @@ typedef struct {
         u16 max_message_size;//57 netbit
         u16 max_message_size_len;
         u32 leasetime;//租约时长
+        mac_address_t macaddr;
     } v4;
     struct {
         ip6_address_t ipaddr;//客户端IP地址 netbit
