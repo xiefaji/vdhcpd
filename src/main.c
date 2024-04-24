@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     //程序日志句柄注册
     xlog_default = openxlog(PACKAGE_NAME"["PACKAGE_MODULES"]", xLOG_DEFAULT, LOG_CONS|LOG_NDELAY, LOG_DAEMON);
     xlog_set_level(NULL, xLOG_DEST_SYSLOG, LOG_ERR);
-    xlog_set_level(NULL, xLOG_DEST_STDOUT, g_verbose);
+    // xlog_set_level(NULL, xLOG_DEST_STDOUT, g_verbose);
     // xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
     xlog_set_file(NULL, path_cfg.logfile, LOG_WARNING);
 
