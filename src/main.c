@@ -18,6 +18,9 @@ PRIVATE void usage()
     fprintf(stdout, "-c      config file path. default[%s]\n", PATH_CONFILE);
     fprintf(stdout, "-d      daemon mode\n");
     fprintf(stdout, "-v      <verbose level>\n");
+    fprintf(stdout, "-v      <verbose level>\n");
+    fprintf(stdout, "-10      reload config\n");
+    fprintf(stdout, "-12      open cmd log \n");
     exit(0);
 }
 
@@ -72,6 +75,8 @@ PRIVATE void signal_callback(int num)
         vdhcpd_set_reload();
         break;
     case SIGUSR2:
+        xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
+        x_log_debug("LOG命令行输出模式");
         break;
     default:
         break;
@@ -108,7 +113,7 @@ int main(int argc, char *argv[])
     xlog_default = openxlog(PACKAGE_NAME"["PACKAGE_MODULES"]", xLOG_DEFAULT, LOG_CONS|LOG_NDELAY, LOG_DAEMON);
     xlog_set_level(NULL, xLOG_DEST_SYSLOG, LOG_ERR);
     xlog_set_level(NULL, xLOG_DEST_STDOUT, g_verbose);
-    xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
+    // xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
     xlog_set_file(NULL, path_cfg.logfile, LOG_WARNING);
 
     database_init();

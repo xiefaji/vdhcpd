@@ -365,10 +365,7 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     dhcpv6_put(&rep, &cookie, DHCPV6_OPT_SERVERID, sizeof(server_duid), server_duid);
     if (realtime_info->v6.rapid_commit) dhcpv6_put(&rep, &cookie, DHCPV6_OPT_RAPID_COMMIT, 0, 0);
     if (ENABLE_IPV6_SLAAC(dhcpd_server) && (reqmsg == DHCPV6_MSG_INFORMATION_REQUEST)) {
-    #ifdef CLIB_DEBUG
-    if(a)
-        x_log_warn("添加information replay内容"); 
-    #endif // DEBUG 
+ 
         for (u32 i = 1; i < realtime_info->v6.reqopts_len; i += 2) {
             if (realtime_info->v6.reqopts[i] == DHCPV6_OPT_DNS_SERVERS)
                 dhcpv6_put(&rep, &cookie, DHCPV6_OPT_DNS_SERVERS, 32, dhcpd_server->SLAAC.dns);
@@ -420,9 +417,6 @@ PUBLIC int server6_process(packet_process_t *packet_process)
     BCOPY(req->transaction_id, rep.transaction_id, 3);
     reply->payload = &rep;
     reply->payload_len = PACKET6_SIZE(&rep, cookie);
-    #ifdef CLIB_DEBUG
-        x_log_warn("v6发送报文");
-    #endif // DEBUG
     return server6_send_reply_packet(packet_process, reply, dest);
 }
 

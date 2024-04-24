@@ -64,7 +64,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
-    x_log_debug("dhcp服务数:%d\n", CSqlRecorDset_GetRecordCount(&Query));
+    x_log_debug("dhcp服务数:%d", CSqlRecorDset_GetRecordCount(&Query));
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) { 
         u16 val16;
         u32 val32;

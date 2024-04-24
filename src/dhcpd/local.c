@@ -55,10 +55,6 @@ PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRe
 PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
-
- 
- 
-
     //接收数据包并处理
     receive_bucket->count = receive_bucket_receive(vdm->sockfd_main, receive_bucket);
     for (int idx = 0; idx < receive_bucket->count; ++idx) {
@@ -468,7 +464,7 @@ PRIVATE int packet_process6(packet_process_t *packet_process, trash_queue_t *pRe
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
 
     if (!ENABLE_DHCP_IPV6(dhcpd_server)){
-        x_log_debug("服务未启动ID:%d,able",dhcpd_server->nID);
+        x_log_debug("IPV6服务未启动ID:%d",dhcpd_server->nID);
         return -1;
     }
          
