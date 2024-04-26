@@ -182,7 +182,7 @@ ALWAYS_INLINE void ip46address_parse(ip46_address_t *ipaddr46, const char *ipadd
 }
 
 typedef union {
-    unsigned char addr[ETH_ALEN];
+    unsigned char addr[ETH_ALEN]; 
 } mac_address_t;
 
 #undef MACADDRFMT

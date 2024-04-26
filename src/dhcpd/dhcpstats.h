@@ -41,7 +41,7 @@ enum vdhcpd_assignment_flags {
     OAF_DHCPV6_NA		= (1 << 5),
     OAF_DHCPV6_PD		= (1 << 6),
 };
-
+ 
 struct vdhcpd_assignment {
     struct list_head head;
     dhcpd_server_stats_t *server_stats;
@@ -139,6 +139,7 @@ ALWAYS_INLINE void recycle_assignment(void *p, trash_queue_t *pRecycleTrash)
 PUBLIC_DATA void server_stats_main_init();
 PUBLIC_DATA void server_stats_main_release();
 PUBLIC_DATA void server_stats_main_maintain();
+PUBLIC_DATA void maint_dhcplease_stats();
 PUBLIC_DATA dhcpd_server_stats_t *server_stats_find(const u32 serverid);
 PUBLIC_DATA void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const mac_address_t macaddr, const int ipv4);
 

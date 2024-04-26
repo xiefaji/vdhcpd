@@ -177,7 +177,7 @@ PUBLIC int vdhcpd_start()
 PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
-    PRIVATE u32 last_rotate, last_update,last_assignment;
+    PRIVATE u32 last_rotate, last_update,last_assignment,last_lease;
     PRIVATE u32 last_modifytime; 
 
     //日志文件句柄保活
@@ -188,6 +188,10 @@ PRIVATE int vdhcpd_maintain(void *p, trash_queue_t *pRecycleTrash)
     if (CMP_COUNTER(last_assignment, 5)) { 
         server_stats_main_maintain(); 
         SET_COUNTER(last_assignment);
+    }
+    if (CMP_COUNTER(last_lease, 10)) { 
+        maint_dhcplease_stats();
+        SET_COUNTER(last_lease);
     }
     if (vdm->reload_vdhcpd) { //配置重载
         __sync_fetch_and_and(&vdm->reload_vdhcpd, 0);

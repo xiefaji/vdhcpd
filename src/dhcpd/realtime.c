@@ -340,9 +340,9 @@ PUBLIC void stats_main_maintain(vdhcpd_stats_t *stats_main, trash_queue_t *pRecy
 {
     PRIVATE u32 last_finger = 0;
     FILE *pFILE = NULL;
-    char filename[MAXNAMELEN+1]={0};
+    char filename[MAXNAMELEN+5]={0};
     if (CMP_COUNTER(last_finger, 10)) {
-        snprintf(filename, MAXNAMELEN, "%s.bak", path_cfg.fingerfile);
+        snprintf(filename, MAXNAMELEN+5, "%s.bak", path_cfg.fingerfile);
         pFILE = fopen(filename, "w");
         SET_COUNTER(last_finger);
     }
