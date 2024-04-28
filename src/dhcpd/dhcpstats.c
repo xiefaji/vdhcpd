@@ -134,7 +134,7 @@ PUBLIC void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const
             a->valid_until = now;
     }
 }
-PUBLIC int search_lease_by_mac(mac_address_t  mac_addr, int ipversion)
+PUBLIC int search_lease_by_mac(mac_address_t mac_addr, int ipversion)
 {
     struct key_tree key_dhcplease;
     key_tree_init(&key_dhcplease);
@@ -149,29 +149,27 @@ PUBLIC int search_lease_by_mac(mac_address_t  mac_addr, int ipversion)
             // IPv4实时租约
             list_for_each_entry_safe(a, n, &server_stats->dhcpv4_assignments, head)
             {
-                x_log_debug("a:'"MACADDRFMT"' search:'"MACADDRFMT"',IPV:%d",MACADDRBYTES(mac_addr),MACADDRBYTES(a->macaddr),ipversion);
-                if (!BCMP(&a->macaddr, &mac_addr, sizeof(mac_address_t))){
-                    return 1; 
+                if (!BCMP(&a->macaddr, &mac_addr, sizeof(mac_address_t))) {
+                    return 1;
                 }
-                 
             }
         } else if (ipversion == 6) {
             // IPv6实时租约
             list_for_each_entry_safe(a, n, &server_stats->dhcpv6_assignments, head)
             {
-                x_log_debug("a:'"MACADDRFMT"' search:'"MACADDRFMT"',IPV:%d",MACADDRBYTES(mac_addr),MACADDRBYTES(a->macaddr),ipversion);
                 if (!BCMP(&a->macaddr, &mac_addr, sizeof(mac_address_t)))
-                    return 1; 
+                    return 1;
             }
         }
         knode = key_next(knode);
     }
     return -1;
 }
-PRIVATE void delet_dhcplease(MYDBOP DBHandle,mac_address_t mac_addr, int ipversion){
+PRIVATE void delet_dhcplease(MYDBOP DBHandle, mac_address_t mac_addr, int ipversion)
+{
     char sql[MINBUFFERLEN + 1] = {0};
-    snprintf(sql, MINBUFFERLEN, "DELETE FROM tbdhcplease6 WHERE `mac`='"MACADDRFMT"' AND `ipversion`=%d", MACADDRBYTES(mac_addr),ipversion);
-    x_log_debug("删除的MAC:'"MACADDRFMT"'",MACADDRBYTES(mac_addr));
+    snprintf(sql, MINBUFFERLEN, "DELETE FROM tbdhcplease6 WHERE `mac`='" MACADDRFMT "' AND `ipversion`=%d", MACADDRBYTES(mac_addr), ipversion);
+    x_log_debug("删除的MAC:'" MACADDRFMT "'", MACADDRBYTES(mac_addr));
     MyDBOp_ExecSQL(&DBHandle, sql);
 }
 PUBLIC void maint_dhcplease_stats()
@@ -197,10 +195,9 @@ PUBLIC void maint_dhcplease_stats()
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
         CSqlRecorDset_GetFieldValue_String(&Query, "mac", buff, MINNAMELEN);
         CSqlRecorDset_GetFieldValue_U16(&Query, "ipversion", &ipversion);
-            macaddress_parse(&mac_addr,buff);
-        if(search_lease_by_mac(mac_addr,ipversion)<0){
-            
-            delet_dhcplease(DBHandle,mac_addr,ipversion);
+        macaddress_parse(&mac_addr, buff);
+        if (search_lease_by_mac(mac_addr, ipversion) < 0) {
+            delet_dhcplease(DBHandle, mac_addr, ipversion);
         }
 
         CSqlRecorDset_MoveNext(&Query);

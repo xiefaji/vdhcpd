@@ -66,7 +66,7 @@ PUBLIC bool MyDBOp_ExecSQL(PMYDBOP pMyDB,const char *sql)
     if (!CSqlRecorDset_ExecSQL(&Query,sql)) {
         CSqlRecorDset_CloseRec(&Query);
         CSqlRecorDset_Destroy(&Query);
-        x_log_warn("%s : 执行SQL失败[ %s ].",__FUNCTION__,sql);
+        x_log_debug("%s : 执行SQL失败[ %s ].",__FUNCTION__,sql);
         return false;
     }
     CSqlRecorDset_CloseRec(&Query);
@@ -77,7 +77,7 @@ PUBLIC bool MyDBOp_ExecSQL(PMYDBOP pMyDB,const char *sql)
 PUBLIC bool MyDBOp_ExecSQL_1(PMYDBOP pMyDB,const char *sql)
 {
     if (!CSqlRecorDset_ExecSQL(&pMyDB->m_Query,sql)) {
-        x_log_warn("%s : 执行SQL失败[%s].",__FUNCTION__,sql);
+        x_log_debug("%s : 执行SQL失败[%s].",__FUNCTION__,sql);
         return false;
     }
     return true;
