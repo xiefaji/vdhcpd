@@ -262,9 +262,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
         }
 
         if (assigned) {
-            u32 my_leasetime =( a->leasetime >dhcpd_server->leasetime) ? a->leasetime:dhcpd_server->leasetime;
-            if ((request->v4.leasetime == 0) || (my_leasetime > request->v4.leasetime))
-                request->v4.leasetime = my_leasetime;
+
 
             if (msgcode == DHCPV4_MSG_DISCOVER) {
                 a->flags &= ~OAF_BOUND;
@@ -279,7 +277,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 } else
                     request->v4.incl_fr_opt = false;
 
-                a->valid_until = ((request->v4.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v4.leasetime));
+                a->valid_until = (time_t)(now + dhcpd_server->leasetime);
             }
         } else if ((!assigned) && a) {
             /* Cleanup failed assignment */ 
