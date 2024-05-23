@@ -45,7 +45,7 @@ PUBLIC int local_main_clean(void *p, trash_queue_t *pRecycleTrash)
     return 0;
 }
 
-PRIVATE int packet_do_dpi(packet_process_t *packet_process);
+PUBLIC_DATA int packet_do_dpi(packet_process_t *packet_process);
 PRIVATE int packet_parse(packet_process_t *packet_process);
 PRIVATE int packet_match_server(packet_process_t *packet_process);
 PRIVATE int packet_process4(packet_process_t *packet_process, trash_queue_t *pRecycleTrash);
@@ -70,7 +70,24 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
             x_log_debug("DHCP服务查找失败,查找id %d", packet_process.dpi.lineid);
             return -1; // DHCP服务查找失败
         }
-
+#ifdef VERSION_VNAAS
+#include <sys/un.h>
+        if (packet_process.dpi.lineid == packet_process.dhcpd_server->dhcprelay.v4.lineid) {
+            struct sockaddr_un sin;
+            BZERO(&sin, sizeof(struct sockaddr_un));
+            sin.sun_family = AF_UNIX;
+            strcpy(sin.sun_path, VNAAS_DHCP_RELAY4_IPC_DGRAM_SOCK);
+            int tmp = sendto(packet_process.vdm->sockfd_main, packet_process.data, packet_process.data_len, 0, (struct sockaddr *)&sin, sizeof(sin));
+            return tmp;
+        } else if (packet_process.dpi.lineid == packet_process.dhcpd_server->dhcprelay.v6.lineid) {
+            struct sockaddr_un sin;
+            BZERO(&sin, sizeof(struct sockaddr_un));
+            sin.sun_family = AF_UNIX;
+            strcpy(sin.sun_path, VNAAS_DHCP_RELAY4_IPC_DGRAM_SOCK);
+            int tmp = sendto(packet_process.vdm->sockfd_main, packet_process.data, packet_process.data_len, 0, (struct sockaddr *)&sin, sizeof(sin));
+            return tmp;
+        }
+#endif
         // 报文基础解析
         if (packet_parse(&packet_process) < 0) {
             x_log_debug("报文基础解析失败");
@@ -96,7 +113,7 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
     return 0;
 }
 
-PRIVATE int packet_do_dpi(packet_process_t *packet_process)
+PUBLIC int packet_do_dpi(packet_process_t *packet_process)
 {
     dhcp_packet_t *request = &packet_process->request;
 #ifndef VERSION_VNAAS
@@ -411,9 +428,9 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
                 BCOPY(&odata[4], &packet_process->macaddr, sizeof(mac_address_t));
             duid_len = olen;
             BCOPY(odata, duid, olen);
-        }                                   /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
-                                              request->v4.msgcode = opt->data[0];
-                                          }*/
+        } /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
+            request->v4.msgcode = opt->data[0];
+        }*/
         else if (otype == DHCPV6_OPT_ORO) { // 请求OPTIONS内容
             reqopts_len = olen;
             BCOPY(odata, reqopts, olen);

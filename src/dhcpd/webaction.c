@@ -6,6 +6,8 @@
 #define XSWEB_FIELD_DHCP_RELEASE_LEASE		1086   //IP释放
 #define XSWEB_FIELD_DHCP_BIND_LEASE 1087  //(IP/MAC 静态绑定)
 #define XSWEB_FIELD_DHCP_MAC_ACL 1088   //MAC控制
+#define XSWEB_FIELD_DHCP_RELOAD 1640   //重载
+
 //act
 #define XSWEB_ACT_RELEASE_DHCPV4_LEASE 14   //DHCPV4 释放
 #define XSWEB_ACT_RELEASE_DHCPV6_LEASE 16   //DHCPV6 释放
@@ -16,10 +18,11 @@
 #define XSWEB_ACT_DELETE_BIND_DHCPV4_LEASE 25// 删除DHCPV4静态绑定lease
 #define XSWEB_ACT_DELETE_BIND_DHCPV6_LEASE 26// 删除DHCPV6静态绑定lease
 #define XSWEB_ACT_UPDATE_MAC_ACL           30
+#define XSWEB_ACT_DHCPV4_RELOAD 21   //DHCPV4 IP/MAC 开关
 
 PRIVATE int process_field_release_lease(int act, cJSON *pROOT, cJSON *pRetRoot);
 PRIVATE int process_field_macacl(int act, cJSON *pROOT, cJSON *pRetRoot);
-
+PRIVATE int process_field_reload(int act, cJSON *pROOT, cJSON *pRetRoot);
 PUBLIC int webaction_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
@@ -92,6 +95,10 @@ PRIVATE int process_webaction_message(int sockfd, const unsigned char *buffer, s
         break;
     case XSWEB_FIELD_DHCP_BIND_LEASE:
         break;
+    case XSWEB_FIELD_DHCP_RELOAD :
+        process_field_reload(pAction->valueuint, pROOT, pRetRoot);
+
+        break;
     case XSWEB_FIELD_DHCP_MAC_ACL:
         process_field_macacl(pAction->valueuint, pROOT, pRetRoot);
         break;
@@ -148,6 +155,20 @@ PRIVATE int process_field_macacl(int act, cJSON *pROOT, cJSON *pRetRoot)
     int ret = -1;
     switch (act) {
     case XSWEB_ACT_UPDATE_MAC_ACL:
+        vdhcpd_set_reload();
+        cJSON_AddStringToObject(pRetRoot, "comment", "Success");
+        break;
+    default:
+        cJSON_AddStringToObject(pRetRoot, "comment", "Fail");
+        break;
+    }
+    return ret;
+}
+PRIVATE int process_field_reload(int act, cJSON *pROOT, cJSON *pRetRoot)
+{
+    int ret = -1;
+    switch (act) {
+    case XSWEB_ACT_DHCPV4_RELOAD:
         vdhcpd_set_reload();
         cJSON_AddStringToObject(pRetRoot, "comment", "Success");
         break;

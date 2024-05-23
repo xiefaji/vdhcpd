@@ -5,6 +5,8 @@
         "defines.h": "c",
         "mysql.h": "c",
         "unordered_map": "c",
-        "unordered_set": "c"
+        "unordered_set": "c",
+        "string_view": "c",
+        "un.h": "c"
     }
 }

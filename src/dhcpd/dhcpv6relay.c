@@ -12,6 +12,8 @@ PUBLIC int relay6_main_init(void *p, trash_queue_t *pRecycleTrash)
 {
     vdhcpd_main_t *vdm = (vdhcpd_main_t *)p;
 
+ 
+#ifndef VERSION_VNAAS
     vdm->sockfd_relay6 = create_udp_socket6(DHCPV6_SERVER_PORT, 0, 1, 0, NULL);
     if (vdm->sockfd_relay6 < 0) {
         x_log_warn("%s:%d 创建SOCKET失败[MAIN].", __FUNCTION__, __LINE__);
@@ -19,7 +21,9 @@ PUBLIC int relay6_main_init(void *p, trash_queue_t *pRecycleTrash)
     }
 
     socket_set_broadcast(vdm->sockfd_relay6);
-
+#else
+    vdm->sockfd_relay4 = create_unix_socket(VNAAS_DHCP_RELAY6_IPC_DGRAM_SOCK, 1, 1);
+#endif 
     //申请数据包接收BUFFER
     receive_bucket = receive_bucket_allocate(1, MAXBUFFERLEN, 0);
     assert(receive_bucket);
@@ -50,7 +54,7 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
         packet_process.data = packets->msg_hdr.msg_iov->iov_base;
         packet_process.data_len = packets->msg_len;
         packet_process.vdm = vdm;
-
+        packet_do_dpi(&packet_process);
         if (packet_deepin_parse(&packet_process) < 0)
             continue;
 
@@ -67,11 +71,28 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
 
 PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 {
+    int retcode=0;
     dhcp_packet_t *request = &packet_process->request;
     request->payload = packet_process->data;
     request->payload_len = packet_process->data_len;
     struct dhcpv6_relay_header *rep = request->payload;
+    unsigned char *l3 = packet_process->dpi.l3;
+    const u16 l3len = packet_process->dpi.l3len;
 
+    struct iphdr *iphdr = request->iphdr = (struct iphdr *)l3;
+    const u16 iphdr_len = iphdr->ihl * 4;
+    struct udphdr *udphdr = request->udphdr = (struct udphdr *)(l3 + iphdr_len);
+    const u16 l4len = l3len - iphdr_len;
+
+    request->l3len = ntohs(iphdr->tot_len);
+    request->l4len = ntohs(udphdr->len);
+    request->payload = (unsigned char *)(request->udphdr + 1);
+    request->payload_len = request->l3len - iphdr_len - sizeof(struct udphdr);
+    if (l3len < request->l3len || l4len < request->l4len || iphdr_len < 20 || ((l4len + iphdr_len) != l3len)) {
+        x_log_debug("%s:%d 错误的报文[%u] l3len[%u/%u] l4len[%u/%u] iphdr_len[%u]", __FUNCTION__, __LINE__, DEFAULT_DHCPv4_PROCESS,
+                    l3len, request->l3len, l4len, request->l4len, iphdr_len);
+        retcode = -1;
+    }
     if (request->payload_len < sizeof(struct dhcpv6_relay_header))
         return -1;
 

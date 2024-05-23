@@ -10,21 +10,21 @@ add_definitions(-DVERSION_VNAAS)
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LC)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UP)
 
-# if (${CMAKE_BUILD_TYPE_LC} MATCHES "release")
-#   add_compile_options( -O3 -fstack-protector -fno-common)
-#   add_compile_definitions(_FORTIFY_SOURCE=2) 
-# elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "debug")
-#   message(STATUS "-- Build Debug")
-#   add_compile_options(-g -O0 -fstack-protector -fno-common)
-#   add_compile_definitions(CLIB_DEBUG)
-# elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "coverity")
-#   add_compile_options(-g -O0)
-#   add_compile_definitions(__COVERITY__)
-# elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "gcov")
-#   add_compile_options(-g -O0 -fprofile-arcs -ftest-coverage)
-#   add_compile_definitions(CLIB_DEBUG CLIB_GCOV)
-#   link_libraries(gcov)
-# endif()
+if (${CMAKE_BUILD_TYPE_LC} MATCHES "release")
+  add_compile_options( -O3 -fstack-protector -fno-common)
+  add_compile_definitions(_FORTIFY_SOURCE=2) 
+elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "debug")
+  message(STATUS "-- Build Debug")
+  add_compile_options(-g -O0 -fstack-protector -fno-common)
+  add_compile_definitions(CLIB_DEBUG)
+elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "coverity")
+  add_compile_options(-g -O0)
+  add_compile_definitions(__COVERITY__)
+elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "gcov")
+  add_compile_options(-g -O0 -fprofile-arcs -ftest-coverage)
+  add_compile_definitions(CLIB_DEBUG CLIB_GCOV)
+  link_libraries(gcov)
+endif()
 
 
 option(ENABLE_SANITIZE_ADDR "Enable Address Sanitizer" OFF)
@@ -158,30 +158,7 @@ add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS} )
     
     #zlib
     target_link_libraries(${PROJECT_NAME} -lz)
-# elseif (CMAKE_SYSTEM_PROCESSOR  MATCHES  "arm64")
-#     message("aarch64")
-#     target_link_libraries(${PROJECT_NAME} -ldl -lpthread -lzstd -lresolv)
-    
-#     link_directories(-L/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/jemalloc/lib64)
-#     target_link_libraries(${PROJECT_NAME} -ljemalloc) 
-
-#     #mysql
-#     include_directories(/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/mysql/include) #include
-#     link_directories(-L/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/mysql/lib)  # -L
-#     target_link_libraries(${PROJECT_NAME} -lmysqlclient -g) # -l
-
-#     #zlib
-#     include_directories(/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/zlib/include) #include
-#     link_directories(-L/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/zlib/lib)  # -L
-#     target_link_libraries(${PROJECT_NAME} -lz) # -l
-
-#     #openssl
-
-#     include_directories(/opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/openssl/include) #include
-#     link_directories(-L /opt/aarch64-linux/toolchain/11.3.1/aarch64-linux-gnu/openssl/lib)  # -L
-#     target_link_libraries(${PROJECT_NAME}  -lssl -lcrypt -lcrypto) # -l
  
-# endif()
 
 target_link_libraries(${PROJECT_NAME} m)
 install(TARGETS ${PROJECT_NAME}

@@ -115,6 +115,7 @@ PUBLIC_DATA int ipc_send_data(packet_process_t *packet_process, const unsigned c
 PUBLIC_DATA int local_main_init(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int local_main_clean(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int local_main_start(void *p, trash_queue_t *pRecycleTrash);
+PUBLIC_DATA int packet_do_dpi(packet_process_t *packet_process);
 //api.c
 PUBLIC_DATA int api_main_init(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA int api_main_clean(void *p, trash_queue_t *pRecycleTrash);

@@ -182,11 +182,11 @@ PUBLIC void dhcpd_server_reload(void *cfg)
         inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcprelay.v4.subnet);
         CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP4", tmpbuffer, MINNAMELEN);
         inet_pton(AF_INET, tmpbuffer, &dhcpd_server->dhcprelay.v4.serverip);
-        CSqlRecorDset_GetFieldValue_U16(&Query, "szProxySerIP4", &val16);
+        CSqlRecorDset_GetFieldValue_U16(&Query, "nProxySerPort4", &val16);
         dhcpd_server->dhcprelay.v4.serverport = htons(val16);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nTxSw4ID", &dhcpd_server->dhcprelay.v4.lineid);
-        CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP4", tmpbuffer, MINNAMELEN);
-        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcprelay.v4.serverip);
+        CSqlRecorDset_GetFieldValue_String(&Query, "szProxySerIP6", tmpbuffer, MINNAMELEN);
+        inet_pton(AF_INET6, tmpbuffer, &dhcpd_server->dhcprelay.v6.serverip);
         CSqlRecorDset_GetFieldValue_U16(&Query, "nProxySerPort6", &val16);
         dhcpd_server->dhcprelay.v6.serverport = htons(val16);
         CSqlRecorDset_GetFieldValue_U32(&Query, "nTxSw6ID", &dhcpd_server->dhcprelay.v6.lineid);
@@ -272,6 +272,8 @@ PUBLIC void dhcpd_server_check(void *cfg)
     while (knode && knode->data) {
         dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
         struct key_node *try_knode = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->nLineID, dhcpd_server); 
+        struct key_node *try_knode2 = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->dhcprelay.v4.lineid, dhcpd_server); 
+        struct key_node *try_knode3 = key_rbinsert(&cfg_main->key_servers_line, dhcpd_server->dhcprelay.v6.lineid, dhcpd_server);  
         x_log_debug("载入线路ID:%d,线路开启状态:%d", dhcpd_server->nLineID,dhcpd_server->nEnabled); 
         assert(!try_knode);
         //加载静态租约

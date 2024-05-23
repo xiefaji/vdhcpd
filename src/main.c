@@ -5,14 +5,14 @@
 
 PUBLIC volatile unsigned int g_counter;
 PRIVATE int g_daemon_mode;
-PRIVATE int g_verbose=LOG_WARNING;
-PUBLIC int filter_subnet=0;
+PRIVATE int g_verbose = LOG_WARNING;
+PUBLIC int filter_subnet = 0;
 PUBLIC path_cfg_t path_cfg;
 
-//运行参数说明
+// 运行参数说明
 PRIVATE void usage()
 {
-    fprintf(stdout, "%s\n", PACKAGE_NAME"["PACKAGE_MODULES"]");
+    fprintf(stdout, "%s\n", PACKAGE_NAME "[" PACKAGE_MODULES "]");
     fprintf(stdout, "Version:%s\n", PACKAGE_VERSION);
     fprintf(stdout, "    options[]\n");
     fprintf(stdout, "-c      config file path. default[%s]\n", PATH_CONFILE);
@@ -24,10 +24,10 @@ PRIVATE void usage()
     exit(0);
 }
 
-//运行参数解析
+// 运行参数解析
 PRIVATE int parse_options(int argc, char **argv)
 {
-    int c=0;
+    int c = 0;
     while ((c = getopt(argc, argv, "dfv:c:")) != -1) {
         switch (c) {
         case 'd':
@@ -50,7 +50,7 @@ PRIVATE int parse_options(int argc, char **argv)
     return 0;
 }
 
-//信号注册回调
+// 信号注册回调
 PRIVATE void signal_callback(int num)
 {
     switch (num) {
@@ -61,12 +61,12 @@ PRIVATE void signal_callback(int num)
         break;
     case SIGINT:
     case SIGTERM:
-        x_log_warn("End %s 正常退出. version [%s] signal[%d]..", PACKAGE_NAME"["PACKAGE_MODULES"]", PACKAGE_VERSION, num);
+        x_log_warn("End %s 正常退出. version [%s] signal[%d]..", PACKAGE_NAME "[" PACKAGE_MODULES "]", PACKAGE_VERSION, num);
         xthread_shutdown();
         vdhcpd_shutdown();
         sleep(3);
 
-        //资源释放
+        // 资源释放
         vdhcpd_release();
         closexlog(xlog_default);
         exit(-1);
@@ -85,12 +85,12 @@ PRIVATE void signal_callback(int num)
 
 int main(int argc, char *argv[])
 {
-    //解析参数
+    // 解析参数
     if (parse_options(argc, argv) < 0)
         return -1;
 
     path_cfg_init(PATH_CONFILE);
-    //daemon启动
+    // daemon启动
     if (g_daemon_mode) {
         int r __attribute__((unused)) = daemon(0, 0);
     }
@@ -98,24 +98,26 @@ int main(int argc, char *argv[])
         return -1;
     write_pidfile(path_cfg.pidfile);
 
-    //注册信号处理函数
-//    signal(SIGINT, signal_callback);
-//    signal(SIGTERM, signal_callback);
+    // 注册信号处理函数
+    //    signal(SIGINT, signal_callback);
+    //    signal(SIGTERM, signal_callback);
     signal(SIGALRM, signal_callback);
     signal(SIGUSR1, signal_callback);
     signal(SIGUSR2, signal_callback);
-//    signal(SIGPIPE, SIG_IGN);
-    g_counter = getpid();//
+    //    signal(SIGPIPE, SIG_IGN);
+    g_counter = getpid(); //
     alarm(1);
     srand(time(0));
 
-    //程序日志句柄注册
-    xlog_default = openxlog(PACKAGE_NAME"["PACKAGE_MODULES"]", xLOG_DEFAULT, LOG_CONS|LOG_NDELAY, LOG_DAEMON);
+    // 程序日志句柄注册
+    xlog_default = openxlog(PACKAGE_NAME "[" PACKAGE_MODULES "]", xLOG_DEFAULT, LOG_CONS | LOG_NDELAY, LOG_DAEMON);
     xlog_set_level(NULL, xLOG_DEST_SYSLOG, LOG_ERR);
     // xlog_set_level(NULL, xLOG_DEST_STDOUT, g_verbose);
     // xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
     xlog_set_file(NULL, path_cfg.logfile, LOG_WARNING);
-
+#ifdef CLIB_DEBUG
+    xlog_set_level(NULL, xLOG_DEST_STDOUT, LOG_DEBUG);
+#endif // DEBUG
     database_init();
 
     vdhcpd_init();

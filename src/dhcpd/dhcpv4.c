@@ -44,25 +44,26 @@ PUBLIC void dhcpv4_put(struct dhcpv4_message *msg, u8 **cookie, u8 type, u8 len,
 
 PRIVATE void dhcpv4_free_assignment(struct vdhcpd_assignment *a)
 {
-    //coolriolee
-    //    if (a->fr_ip)
-    //        dhcpv4_fr_stop(a);
+    // coolriolee
+    //     if (a->fr_ip)
+    //         dhcpv4_fr_stop(a);
 }
-PUBLIC bool send_dhcpv4_release(realtime_info_t *realtime_info){
-    packet_process_t *packet_process; 
-    packet_process->realtime_info=realtime_info;
+PUBLIC bool send_dhcpv4_release(realtime_info_t *realtime_info)
+{
+    packet_process_t *packet_process;
+    packet_process->realtime_info = realtime_info;
     dhcp_packet_t *reply = &packet_process->reply;
     struct dhcpv4_message rep = {
         .op = DHCPV4_BOOTREPLY,
-                .htype = 0x01,
-                .hlen = 6,
-                .hops = 0,
-                .xid = getpid(),//用pid代替一下
-                .secs = 0,
-                .flags = 0,
-                .ciaddr =0,
-                .giaddr = 0,
-                .siaddr = 0,
+        .htype = 0x01,
+        .hlen = 6,
+        .hops = 0,
+        .xid = getpid(), // 用pid代替一下
+        .secs = 0,
+        .flags = 0,
+        .ciaddr = 0,
+        .giaddr = 0,
+        .siaddr = 0,
     };
     BCOPY(&realtime_info->v4.macaddr, rep.chaddr, sizeof(rep.chaddr));
     rep.options[0] = 0x63;
@@ -72,45 +73,45 @@ PUBLIC bool send_dhcpv4_release(realtime_info_t *realtime_info){
     u8 *cookie = &rep.options[4];
     reply->v4.msgcode = DHCPV4_MSG_RELEASE;
 
-
-
-    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_MESSAGE, 1, &reply->v4.msgcode );//release
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_MESSAGE, 1, &reply->v4.msgcode); // release
     dhcpv4_put(&rep, &cookie, DHCPV4_OPT_SERVERID, 4, &realtime_info->v4.gipaddr);
-    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_CLIENT_IDENTIFIER, 4, &realtime_info->v4.ipaddr);//客户端ip
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_CLIENT_IDENTIFIER, 4, &realtime_info->v4.ipaddr); // 客户端ip
     dhcpv4_put(&rep, &cookie, DHCPV4_OPT_END, 0, NULL);
 
-    struct sockaddr_in dest = { .sin_family = AF_INET,
-                .sin_addr.s_addr = realtime_info->v4.gipaddr.address,
-                .sin_port = realtime_info->v4.ipaddr.address,};
- 
+    struct sockaddr_in dest = {
+        .sin_family = AF_INET,
+        .sin_addr.s_addr = realtime_info->v4.gipaddr.address,
+        .sin_port = realtime_info->v4.ipaddr.address,
+    };
 
     reply->payload = &rep;
     reply->payload_len = PACKET4_SIZE(&rep, cookie);
     return server4_send_reply_packet(packet_process, reply, dest);
 }
-PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip4_address_t addr/*netbit*/)
+PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip4_address_t addr /*netbit*/)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcpd_server_stats_t *server_stats = dhcpd_server->server_stats;
 
     u32 h_addr = IPV4_NTOHL(addr);
     struct vdhcpd_assignment *c;
-    if(addr.address==dhcpd_server->dhcpv4.gateway.address)
-        return false; //分配网关则返回
+    if (addr.address == dhcpd_server->dhcpv4.gateway.address)
+        return false; // 分配网关则返回
     dhcpd_staticlease_t *staticlease = staticlease_search4_ipaddr(dhcpd_server->staticlease_main, addr);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;
 
-    list_for_each_entry(c, &server_stats->dhcpv4_assignments, head) {
+    list_for_each_entry(c, &server_stats->dhcpv4_assignments, head)
+    {
         u32 c_addr = IPV4_NTOHL(c->addr);
         if (c_addr == h_addr)
-            return false;//IP已被分配
+            return false; // IP已被分配
         //        if (c_addr > h_addr)
         //            break;
     }
 
     /* Insert new node before c (might match list head) */
-    //head记录上一个节点和下一个节点信息
+    // head记录上一个节点和下一个节点信息
     a->addr = addr;
     dhcpd_server_stats_lock(server_stats);
     list_add_tail(&a->head, &c->head);
@@ -118,34 +119,36 @@ PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct v
     return true;
 }
 
-//实时租约查找[MACADDR]
+// 实时租约查找[MACADDR]
 PRIVATE struct vdhcpd_assignment *find_assignment_by_macaddr(packet_process_t *packet_process, const mac_address_t macaddr)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcpd_server_stats_t *server_stats = dhcpd_server->server_stats;
     struct vdhcpd_assignment *a;
-    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head) {
+    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head)
+    {
         if (!BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t)))
             return a;
     }
     return NULL;
 }
 
-//实时租约查找[IPADDR]
-PRIVATE struct vdhcpd_assignment *find_assignment_by_ipaddr(packet_process_t *packet_process, const ip4_address_t ipaddr/*netbit*/)
+// 实时租约查找[IPADDR]
+PRIVATE struct vdhcpd_assignment *find_assignment_by_ipaddr(packet_process_t *packet_process, const ip4_address_t ipaddr /*netbit*/)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     dhcpd_server_stats_t *server_stats = dhcpd_server->server_stats;
     struct vdhcpd_assignment *a;
-    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head) {
+    list_for_each_entry(a, &server_stats->dhcpv4_assignments, head)
+    {
         if (!BCMP(&a->addr, &ipaddr, sizeof(ip4_address_t)))
             return a;
     }
     return NULL;
 }
 
-//租约分配
-PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip4_address_t raddr/*netbit*/)
+// 租约分配
+PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assignment *a, const ip4_address_t raddr /*netbit*/)
 {
     dhcpd_server_t *dhcpd_server = packet_process->dhcpd_server;
     u32 start = IPV4_NTOHL(dhcpd_server->dhcpv4.startip);
@@ -156,33 +159,31 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
 
     /* Preconfigured IP address by static lease */
     if (a->ipaddr.address) {
-        assigned = dhcpv4_insert_assignment(packet_process, a, a->ipaddr);/*静态租约*/
-        if (assigned) x_log_debug("接入服务[分配地址]: 静态租约 "IPV4FMT".", IPV4BYTES(a->addr));
+        assigned = dhcpv4_insert_assignment(packet_process, a, a->ipaddr); /*静态租约*/
+        if (assigned) x_log_debug("接入服务[分配地址]: 静态租约 " IPV4FMT ".", IPV4BYTES(a->addr));
         return assigned;
     }
 
     /* try to assign the IP the client asked for */
-    if (start <= IPV4_NTOHL(raddr) && IPV4_NTOHL(raddr) <= end ) {
-        struct vdhcpd_assignment *try_assigin=find_assignment_by_ipaddr(packet_process, raddr);
-         if( (!try_assigin)|| BCMP(&try_assigin->macaddr, &a->macaddr, sizeof(mac_address_t))){
-            
-            assigned = dhcpv4_insert_assignment(packet_process, a, raddr);/*固定IP地址*/
-            if (assigned) { 
-                x_log_debug("接入服务[分配地址]: 固定IP地址 "IPV4FMT".", IPV4BYTES(a->addr));
+    if (start <= IPV4_NTOHL(raddr) && IPV4_NTOHL(raddr) <= end) {
+        struct vdhcpd_assignment *try_assigin = find_assignment_by_ipaddr(packet_process, raddr);
+        if ((!try_assigin) || BCMP(&try_assigin->macaddr, &a->macaddr, sizeof(mac_address_t))) {
+            assigned = dhcpv4_insert_assignment(packet_process, a, raddr); /*固定IP地址*/
+            if (assigned) {
+                x_log_debug("接入服务[分配地址]: 固定IP地址 " IPV4FMT ".", IPV4BYTES(a->addr));
                 return true;
-                }            
-         }else{
-            a->addr=raddr;
+            }
+        } else {
+            a->addr = raddr;
             return true;
-         }  
+        }
     }
-
 
     /* Seed RNG with checksum of hwaddress */
     for (size_t i = 0; i < sizeof(mac_address_t); ++i) {
         /* Knuth's multiplicative method */
         u8 o = a->macaddr.addr[i];
-        seed += (o*2654435761) % UINT32_MAX;
+        seed += (o * 2654435761) % UINT32_MAX;
     }
     srand(seed);
 
@@ -192,9 +193,9 @@ PRIVATE bool dhcpv4_assign(packet_process_t *packet_process, struct vdhcpd_assig
         if (find_assignment_by_ipaddr(packet_process, n_try))
             continue;
 
-        assigned = dhcpv4_insert_assignment(packet_process, a, n_try);/*动态IP*/
-        if (assigned) { 
-            x_log_debug("接入服务[分配地址]: 动态IP地址 "IPV4FMT" (try %u of %u).", IPV4BYTES(a->addr), i + 1, count); 
+        assigned = dhcpv4_insert_assignment(packet_process, a, n_try); /*动态IP*/
+        if (assigned) {
+            x_log_debug("接入服务[分配地址]: 动态IP地址 " IPV4FMT " (try %u of %u).", IPV4BYTES(a->addr), i + 1, count);
             return true;
         }
     }
@@ -212,24 +213,23 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
     dhcpd_staticlease_t *staticlease = dhcpd_server_staticlease_search_macaddr(dhcpd_server, packet_process->macaddr, 4);
     time_t now = vdhcpd_time();
 
-    if (staticlease && a && BCMP(&staticlease->u.v4.ipaddr, &a->ipaddr, sizeof(ip4_address_t))) { 
-        free_assignment(a); 
+    if (staticlease && a && BCMP(&staticlease->u.v4.ipaddr, &a->ipaddr, sizeof(ip4_address_t))) {
+        free_assignment(a);
         a = NULL;
     }
 
-    //coolriolee
-    //    if (a && (a->flags & OAF_BOUND) && a->fr_ip) {
-    //        *fr_serverid = a->fr_ip->addr.addr.in.s_addr;
-    //        dhcpv4_fr_stop(a);
-    //    }
+    // coolriolee
+    //     if (a && (a->flags & OAF_BOUND) && a->fr_ip) {
+    //         *fr_serverid = a->fr_ip->addr.addr.in.s_addr;
+    //         dhcpv4_fr_stop(a);
+    //     }
 
-    if (msgcode == DHCPV4_MSG_DISCOVER || msgcode == DHCPV4_MSG_REQUEST) {//租约申请/续租
- 
+    if (msgcode == DHCPV4_MSG_DISCOVER || msgcode == DHCPV4_MSG_REQUEST) { // 租约申请/续租
 
         bool assigned = !!a;
 
         if (!a) {
-            if (1/*!iface->no_dynamic_dhcp*/ || staticlease) {
+            if (1 /*!iface->no_dynamic_dhcp*/ || staticlease) {
                 /* Create new binding */
                 a = alloc_assignment(dhcpd_server->server_stats, 0);
                 assert(a);
@@ -237,33 +237,30 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 /* Set valid time to 0 for static lease indicating */
                 /* infinite lifetime otherwise current time        */
                 a->leasetime = dhcpd_server->leasetime;
-                a->valid_until = now+MIN_RELEASE_INTERVAL;
+                a->valid_until = now + MIN_RELEASE_INTERVAL;
                 a->dhcp_free_cb = dhcpv4_free_assignment;
                 a->flags = OAF_DHCPV4;
                 if (staticlease) {
                     a->flags |= OAF_STATIC;
                     a->ipaddr = staticlease->u.v4.ipaddr;
                     a->gateway = staticlease->u.v4.gateway;
-                    a->valid_until = 0;//静态租约
-                    //if (staticlease->leasetime)
-                    //    a->leasetime = staticlease->leasetime;
+                    a->valid_until = 0; // 静态租约
+                    // if (staticlease->leasetime)
+                    //     a->leasetime = staticlease->leasetime;
                 }
 
-                assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr); 
- 
+                assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
             }
         } else if ((IPv4_SUBNET(&a->addr, &dhcpd_server->dhcpv4.netmask) != IPv4_SUBNET(&dhcpd_server->dhcpv4.startip, &dhcpd_server->dhcpv4.netmask)) && !(a->flags & OAF_STATIC)) {
-            //动态租约终端且与接入服务网段不匹配
+            // 动态租约终端且与接入服务网段不匹配
             dhcpd_server_stats_lock(server_stats);
             list_del_init(&a->head);
-            dhcpd_server_stats_unlock(server_stats); 
+            dhcpd_server_stats_unlock(server_stats);
             a->addr.address = INADDR_ANY;
             assigned = dhcpv4_assign(packet_process, a, request->v4.reqaddr);
         }
 
         if (assigned) {
-
-
             if (msgcode == DHCPV4_MSG_DISCOVER) {
                 a->flags &= ~OAF_BOUND;
                 request->v4.incl_fr_opt = request->v4.accept_fr_nonce;
@@ -280,16 +277,16 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 a->valid_until = (time_t)(now + dhcpd_server->leasetime);
             }
         } else if ((!assigned) && a) {
-            /* Cleanup failed assignment */ 
+            /* Cleanup failed assignment */
             free_assignment(a);
             a = NULL;
         }
-    } else if (msgcode == DHCPV4_MSG_RELEASE && a) {//租约释放
+    } else if (msgcode == DHCPV4_MSG_RELEASE && a) { // 租约释放
         a->flags &= ~OAF_BOUND;
         a->valid_until = now + MIN_RELEASE_INTERVAL;
-    } else if (msgcode == DHCPV4_MSG_DECLINE && a) {//租约拒绝
+    } else if (msgcode == DHCPV4_MSG_DECLINE && a) { // 租约拒绝
         a->flags &= ~OAF_BOUND;
-        if (!(a->flags & OAF_STATIC) || !IPv4_IS_EQUAL(&a->ipaddr, &a->addr)) {//分配的IP与静态租约不符
+        if (!(a->flags & OAF_STATIC) || !IPv4_IS_EQUAL(&a->ipaddr, &a->addr)) { // 分配的IP与静态租约不符
             BZERO(&a->macaddr, sizeof(mac_address_t));
             a->valid_until = now + 3600; /* Block address for 1h */
         } else
@@ -311,15 +308,15 @@ PUBLIC int server4_process(packet_process_t *packet_process)
 
     struct dhcpv4_message rep = {
         .op = DHCPV4_BOOTREPLY,
-                .htype = req->htype,
-                .hlen = req->hlen,
-                .hops = 0,
-                .xid = req->xid,
-                .secs = 0,
-                .flags = req->flags,
-                .ciaddr = {.addr = {INADDR_ANY}},
-                .giaddr = req->giaddr,
-                .siaddr = dhcpd_server->dhcpv4.gateway,
+        .htype = req->htype,
+        .hlen = req->hlen,
+        .hops = 0,
+        .xid = req->xid,
+        .secs = 0,
+        .flags = req->flags,
+        .ciaddr = {.addr = {INADDR_ANY}},
+        .giaddr = req->giaddr,
+        .siaddr = dhcpd_server->dhcpv4.gateway,
     };
     BCOPY(req->chaddr, rep.chaddr, sizeof(rep.chaddr));
     rep.options[0] = 0x63;
@@ -330,19 +327,20 @@ PUBLIC int server4_process(packet_process_t *packet_process)
     reply->v4.msgcode = DHCPV4_MSG_ACK;
 
     if (reqmsg != DHCPV4_MSG_DISCOVER && reqmsg != DHCPV4_MSG_REQUEST && reqmsg != DHCPV4_MSG_INFORM
-            && reqmsg != DHCPV4_MSG_DECLINE && reqmsg != DHCPV4_MSG_RELEASE)
-        return -1; 
-    //租约校验/分配
+        && reqmsg != DHCPV4_MSG_DECLINE && reqmsg != DHCPV4_MSG_RELEASE)
+        return -1;
+    // 租约校验/分配
     if (reqmsg != DHCPV4_MSG_INFORM)
         a = dhcpv4_lease(packet_process, reqmsg);
 
-    if (!a ) {
-        if (reqmsg == DHCPV4_MSG_REQUEST) reply->v4.msgcode = DHCPV4_MSG_NAK;
-        else if (reqmsg == DHCPV4_MSG_DISCOVER) return -1;
+    if (!a) {
+        if (reqmsg == DHCPV4_MSG_REQUEST)
+            reply->v4.msgcode = DHCPV4_MSG_NAK;
+        else if (reqmsg == DHCPV4_MSG_DISCOVER)
+            return -1;
     } else if (reqmsg == DHCPV4_MSG_DISCOVER) {
         reply->v4.msgcode = DHCPV4_MSG_OFFER;
-    } else if (reqmsg == DHCPV4_MSG_REQUEST && ((request->v4.reqaddr.address && !IPv4_IS_EQUAL(&request->v4.reqaddr, &a->addr)) ||
-              (req->ciaddr.address && !IPv4_IS_EQUAL(&req->ciaddr, &a->addr)))) {
+    } else if (reqmsg == DHCPV4_MSG_REQUEST && ((request->v4.reqaddr.address && !IPv4_IS_EQUAL(&request->v4.reqaddr, &a->addr)) || (req->ciaddr.address && !IPv4_IS_EQUAL(&req->ciaddr, &a->addr)))) {
         reply->v4.msgcode = DHCPV4_MSG_NAK;
         /*
          * DHCP client requested an IP which we can't offer to him. Probably the
@@ -365,15 +363,15 @@ PUBLIC int server4_process(packet_process_t *packet_process)
         if (request->v4.fr_serverid.address)
             serverid = request->v4.fr_serverid;
 
-        //请求地址与子网不匹配
+        // 请求地址与子网不匹配
         if (req->ciaddr.address && (IPv4_SUBNET(&dhcpd_server->dhcpv4.startip, &dhcpd_server->dhcpv4.netmask) != IPv4_SUBNET(&req->ciaddr, &dhcpd_server->dhcpv4.netmask)))
             req->ciaddr.address = INADDR_ANY;
     }
 
     if (reqmsg == DHCPV4_MSG_DECLINE || reqmsg == DHCPV4_MSG_RELEASE)
-        return 0;//
+        return 0; //
 
-    //响应报文
+    // 响应报文
     dhcpv4_put(&rep, &cookie, DHCPV4_OPT_MESSAGE, 1, &reply->v4.msgcode);
     dhcpv4_put(&rep, &cookie, DHCPV4_OPT_SERVERID, 4, &serverid);
 
@@ -391,43 +389,47 @@ PUBLIC int server4_process(packet_process_t *packet_process)
             dhcpv4_put(&rep, &cookie, DHCPV4_OPT_REBIND, 4, &val);
         }
 
-        dhcpv4_put(&rep, &cookie, DHCPV4_OPT_HOSTNAME, realtime_info->v4.hostname_len, realtime_info->v4.hostname);//设备主机名称
+        dhcpv4_put(&rep, &cookie, DHCPV4_OPT_HOSTNAME, realtime_info->v4.hostname_len, realtime_info->v4.hostname); // 设备主机名称
 
         realtime_info->v4.leasetime = request->v4.leasetime;
         realtime_info->v4.ipaddr = rep.yiaddr;
         realtime_info->v4.gipaddr = req->giaddr;
-        BCOPY(&packet_process->macaddr,&realtime_info->v4.macaddr,sizeof(mac_address_t));
-        if (reply->v4.msgcode == DHCPV4_MSG_ACK) {
+        BCOPY(&packet_process->macaddr, &realtime_info->v4.macaddr, sizeof(mac_address_t));
+
+         if (reply->v4.msgcode == DHCPV4_MSG_ACK) {
             SET_COUNTER(realtime_info->updatetick);
             realtime_info->flags |= RLTINFO_FLAGS_SERVER4;
-            if (a->flags & OAF_STATIC) realtime_info->flags |= RLTINFO_FLAGS_STATIC4;
-            else realtime_info->flags &= ~RLTINFO_FLAGS_STATIC4;
+            if (a->flags & OAF_STATIC)
+                realtime_info->flags |= RLTINFO_FLAGS_STATIC4;
+            else
+                realtime_info->flags &= ~RLTINFO_FLAGS_STATIC4;
             __sync_fetch_and_add(&realtime_info->update_db4, 1);
         }
-    }else
-    { 
-        x_log_debug("租约不存在:MAC:"MACADDRFMT".", MACADDRBYTES(packet_process->macaddr)); 
+    } else {
+        x_log_debug("租约不存在:MAC:" MACADDRFMT ".", MACADDRBYTES(packet_process->macaddr));
     }
 
     if (dhcpd_server->iface.mtu) {
         u16 mtu = htons(dhcpd_server->iface.mtu);
-        dhcpv4_put(&rep, &cookie, DHCPV4_OPT_MTU, 2, &mtu);//MTU
+        dhcpv4_put(&rep, &cookie, DHCPV4_OPT_MTU, 2, &mtu); // MTU
     }
 
-    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_ROUTER, 4, &dhcpd_server->dhcpv4.gateway);//网关地址
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_ROUTER, 4, &dhcpd_server->dhcpv4.gateway); // 网关地址
 
-    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_NETMASK, 4, &dhcpd_server->dhcpv4.netmask);//子网掩码地址
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_NETMASK, 4, &dhcpd_server->dhcpv4.netmask); // 子网掩码地址
 
     if (dhcpd_server->dhcpv4.broadcast.address != INADDR_ANY)
-        dhcpv4_put(&rep, &cookie, DHCPV4_OPT_BROADCAST, 4, &dhcpd_server->dhcpv4.broadcast);//局域网广播地址
+        dhcpv4_put(&rep, &cookie, DHCPV4_OPT_BROADCAST, 4, &dhcpd_server->dhcpv4.broadcast); // 局域网广播地址
 
-    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_DNSSERVER, 8, &dhcpd_server->dhcpv4.dns);//DNS服务器地址
+    dhcpv4_put(&rep, &cookie, DHCPV4_OPT_DNSSERVER, 8, &dhcpd_server->dhcpv4.dns); // DNS服务器地址
 
     dhcpv4_put(&rep, &cookie, DHCPV4_OPT_END, 0, NULL);
 
-    struct sockaddr_in dest = { .sin_family = AF_INET,
-                .sin_addr.s_addr = request->iphdr->saddr,
-                .sin_port = request->udphdr->source,};
+    struct sockaddr_in dest = {
+        .sin_family = AF_INET,
+        .sin_addr.s_addr = request->iphdr->saddr,
+        .sin_port = request->udphdr->source,
+    };
     if (req->giaddr.address) {
         /* relay agent is configured, send reply to the agent */
         dest.sin_addr = req->giaddr.addr;
@@ -445,15 +447,15 @@ PUBLIC int server4_process(packet_process_t *packet_process)
         dest.sin_addr.s_addr = INADDR_BROADCAST;
         dest.sin_port = htons(DHCPV4_CLIENT_PORT);
     } else {
-//        struct arpreq arp = {.arp_flags = ATF_COM};
+        //        struct arpreq arp = {.arp_flags = ATF_COM};
         /* send reply to the newly (in this proccess) allocated IP */
         dest.sin_addr = rep.yiaddr.addr;
         dest.sin_port = htons(DHCPV4_CLIENT_PORT);
-//        memcpy(arp.arp_ha.sa_data, req->chaddr, 6);
-//        memcpy(&arp.arp_pa, &dest, sizeof(arp.arp_pa));
-//        memcpy(arp.arp_dev, iface->ifname, sizeof(arp.arp_dev));
-//        if (ioctl(sock, SIOCSARP, &arp) < 0)
-//            syslog(LOG_ERR, "ioctl(SIOCSARP): %m");
+        //        memcpy(arp.arp_ha.sa_data, req->chaddr, 6);
+        //        memcpy(&arp.arp_pa, &dest, sizeof(arp.arp_pa));
+        //        memcpy(arp.arp_dev, iface->ifname, sizeof(arp.arp_dev));
+        //        if (ioctl(sock, SIOCSARP, &arp) < 0)
+        //            syslog(LOG_ERR, "ioctl(SIOCSARP): %m");
     }
 
     reply->payload = &rep;
@@ -467,7 +469,7 @@ PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     realtime_info_t *realtime_info = packet_process->realtime_info;
     struct dhcpv4_message *rep = packet->payload;
 
-    unsigned char buffer[MAXBUFFERLEN+1]={0}; 
+    unsigned char buffer[MAXBUFFERLEN + 1] = {0};
     unsigned int offset = 0, length = 0;
 #ifndef VERSION_VNAAS
     ipcshare_hdr_t *ipcsharehdr = (ipcshare_hdr_t *)buffer;
@@ -499,18 +501,18 @@ PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     u8 *payload = (u8 *)&buffer[offset];
 #endif
 
-    //DHCP报文封装
+    // DHCP报文封装
     BCOPY(packet->payload, payload, packet->payload_len);
     length += packet->payload_len;
 
-    //封装UDP Header
+    // 封装UDP Header
     length += sizeof(struct udphdr);
     pUDPHeader->len = htons(length);
     pUDPHeader->dest = dest.sin_port;
     pUDPHeader->source = htons(DHCPV4_SERVER_PORT);
     pUDPHeader->check = 0;
 
-    //封装IP Header
+    // 封装IP Header
     length += sizeof(struct iphdr);
     pIPHeader->version = 0x4;
     pIPHeader->ihl = 0x5;
@@ -521,30 +523,34 @@ PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_pac
     pIPHeader->ttl = 64;
     pIPHeader->protocol = IPPROTO_UDP;
     pIPHeader->check = 0;
-    pIPHeader->saddr = dhcpd_server->dhcpv4.gateway.address ? dhcpd_server->dhcpv4.gateway.address:dhcpd_server->iface.ipaddr.address;
+    pIPHeader->saddr = dhcpd_server->dhcpv4.gateway.address ? dhcpd_server->dhcpv4.gateway.address : dhcpd_server->iface.ipaddr.address;
     pIPHeader->daddr = dest.sin_addr.s_addr;
-    WinDivertHelperCalcChecksums(pIPHeader, length, 0);//计算校验和
+    WinDivertHelperCalcChecksums(pIPHeader, length, 0); // 计算校验和
 
 #ifndef VERSION_VNAAS
-    //封装IPC Header
+    // 封装IPC Header
     ipcsharehdr->process = DEFAULT_DHCPv4_PROCESS;
-    ipcsharehdr->code = CODE_REPLY;//1
+    ipcsharehdr->code = CODE_REPLY; // 1
     ipcsharehdr->driveid = dhcpd_server->iface.driveid;
     ipcsharehdr->lineid = dhcpd_server->nLineID;
     ipcsharehdr->outer_vlanid = realtime_info->ovlanid;
     ipcsharehdr->inner_vlanid = realtime_info->ivlanid;
     ipcsharehdr->session = realtime_info->sessionid;
     ipcsharehdr->datalen = length;
-    if (DHCPV4_FLAGS_BROADCAST(rep)) memset(ipcsharehdr->ethhdr.ether_dhost, 0xFF, ETH_ALEN);
-    else BCOPY(realtime_info->key.u.macaddr.addr, ipcsharehdr->ethhdr.ether_dhost, ETH_ALEN);
+    if (DHCPV4_FLAGS_BROADCAST(rep))
+        memset(ipcsharehdr->ethhdr.ether_dhost, 0xFF, ETH_ALEN);
+    else
+        BCOPY(realtime_info->key.u.macaddr.addr, ipcsharehdr->ethhdr.ether_dhost, ETH_ALEN);
     BCOPY(dhcpd_server->iface.macaddr.addr, ipcsharehdr->ethhdr.ether_shost, ETH_ALEN);
     ipcsharehdr->ethhdr.ether_type = htons(ETH_P_IP);
     length += sizeof(ipcshare_hdr_t);
 #else
-    //封装Ether Header
+    // 封装Ether Header
     u16 l3_offset = 0;
-    if (DHCPV4_FLAGS_BROADCAST(rep)) memset(ethhdr->ether_dhost, 0xFF, ETH_ALEN);
-    else BCOPY(realtime_info->key.u.macaddr.addr, ethhdr->ether_dhost, ETH_ALEN);
+    if (DHCPV4_FLAGS_BROADCAST(rep))
+        memset(ethhdr->ether_dhost, 0xFF, ETH_ALEN);
+    else
+        BCOPY(realtime_info->key.u.macaddr.addr, ethhdr->ether_dhost, ETH_ALEN);
     BCOPY(dhcpd_server->iface.macaddr.addr, ethhdr->ether_shost, ETH_ALEN);
     ethhdr->ether_type = htons(ETH_P_IP);
     length += sizeof(struct ether_header);
@@ -564,7 +570,7 @@ PRIVATE int server4_send_reply_packet(packet_process_t *packet_process, dhcp_pac
         }
     }
 
-    //封装IPC Header
+    // 封装IPC Header
     ephdr->path.field = UIPC_FIELD_DHCP_SERVER;
     ephdr->path.act = UIPC_ACT_WORK_MSG;
     ephdr->sw_rx_dbid = dhcpd_server->nLineID;

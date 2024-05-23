@@ -20,6 +20,8 @@
 #else
 #define VNAAS_POP_IPC_DGRAM_SOCK "/run/vnaas_pop_ipc.socket"
 #define VNAAS_DHCP_IPC_DGRAM_SOCK "/run/vnaas_dhcp_ipc.socket"
+#define VNAAS_DHCP_RELAY4_IPC_DGRAM_SOCK "/run/vnaas_dhcp_relay4_ipc.socket"
+#define VNAAS_DHCP_RELAY6_IPC_DGRAM_SOCK "/run/vnaas_dhcp_relay6_ipc.socket"
 #define VNAAS_DHCP_API_DGRAM_SOCK "/run/vnaas_dhcp_api.socket"
 #endif
 
