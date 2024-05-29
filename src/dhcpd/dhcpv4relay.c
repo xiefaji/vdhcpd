@@ -63,6 +63,7 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
 
 PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 {
+#ifdef VERSION_VNAAS
     int retcode = 0;
     dhcp_packet_t *request = &packet_process->request;
 
@@ -83,6 +84,11 @@ PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
                     l3len, request->l3len, l4len, request->l4len, iphdr_len);
         retcode = -1;
     }
+#else
+    request->payload = packet_process->data;
+    request->payload_len = packet_process->data_len;
+
+#endif
 
     struct dhcpv4_message *rep = request->payload;
 
