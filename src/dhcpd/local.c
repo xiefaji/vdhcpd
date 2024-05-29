@@ -72,20 +72,22 @@ PUBLIC int local_main_start(void *p, trash_queue_t *pRecycleTrash)
         }
 #ifdef VERSION_VNAAS
 #include <sys/un.h>
-        if (packet_process.dpi.lineid == packet_process.dhcpd_server->dhcprelay.v4.lineid) {
-            struct sockaddr_un sin;
-            BZERO(&sin, sizeof(struct sockaddr_un));
-            sin.sun_family = AF_UNIX;
-            strcpy(sin.sun_path, VNAAS_DHCP_RELAY4_IPC_DGRAM_SOCK);
-            int tmp = sendto(packet_process.vdm->sockfd_main, packet_process.data, packet_process.data_len, 0, (struct sockaddr *)&sin, sizeof(sin));
-            return tmp;
-        } else if (packet_process.dpi.lineid == packet_process.dhcpd_server->dhcprelay.v6.lineid) {
-            struct sockaddr_un sin;
-            BZERO(&sin, sizeof(struct sockaddr_un));
-            sin.sun_family = AF_UNIX;
-            strcpy(sin.sun_path, VNAAS_DHCP_RELAY4_IPC_DGRAM_SOCK);
-            int tmp = sendto(packet_process.vdm->sockfd_main, packet_process.data, packet_process.data_len, 0, (struct sockaddr *)&sin, sizeof(sin));
-            return tmp;
+        if (packet_process.dpi.lineid != packet_process.dhcpd_server->nLineID) {
+            if (packet_process.dpi.lineid == packet_process.dhcpd_server->dhcprelay.v4.lineid && packet_process.dpi.process == DEFAULT_DHCPv4_PROCESS) {
+                struct sockaddr_un sin;
+                BZERO(&sin, sizeof(struct sockaddr_un));
+                sin.sun_family = AF_UNIX;
+                strcpy(sin.sun_path, VNAAS_DHCP_RELAY4_IPC_DGRAM_SOCK);
+                int tmp = sendto(packet_process.vdm->sockfd_main, packet_process.data, packet_process.data_len, 0, (struct sockaddr *)&sin, sizeof(sin));
+            }
+            if (packet_process.dpi.lineid == packet_process.dhcpd_server->dhcprelay.v6.lineid && packet_process.dpi.process == DEFAULT_DHCPv6_PROCESS) {
+                struct sockaddr_un sin;
+                BZERO(&sin, sizeof(struct sockaddr_un));
+                sin.sun_family = AF_UNIX;
+                strcpy(sin.sun_path, VNAAS_DHCP_RELAY6_IPC_DGRAM_SOCK);
+                int tmp = sendto(packet_process.vdm->sockfd_main, packet_process.data, packet_process.data_len, 0, (struct sockaddr *)&sin, sizeof(sin));
+            }
+            return 1;
         }
 #endif
         // 报文基础解析
@@ -194,7 +196,8 @@ PUBLIC int packet_do_dpi(packet_process_t *packet_process)
     packet_process->dpi.l3len = ephdr->data_len - offset;
     request->ethhdr = ethhdr;
 #endif
-    x_log_debug("报文信息:线路ID: %d ovlan: %d vlan: %d vlanproto: %d %d", packet_process->dpi.lineid, packet_process->dpi.vlanid[0], packet_process->dpi.vlanid[1], packet_process->dpi.vlanproto[0], packet_process->dpi.vlanproto[1]);
+    x_log_debug("报文信息:线路ID: %d ovlan: %d vlan: %d vlanproto: %d %d,ipv:%d", packet_process->dpi.lineid, packet_process->dpi.vlanid[0],
+                packet_process->dpi.vlanid[1], packet_process->dpi.vlanproto[0], packet_process->dpi.vlanproto[1], packet_process->dpi.process == DEFAULT_DHCPv4_PROCESS ? 4 : 6);
     return 0;
 }
 
@@ -428,9 +431,9 @@ PRIVATE int packet_deepin_parse6(packet_process_t *packet_process, trash_queue_t
                 BCOPY(&odata[4], &packet_process->macaddr, sizeof(mac_address_t));
             duid_len = olen;
             BCOPY(odata, duid, olen);
-        } /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
-            request->v4.msgcode = opt->data[0];
-        }*/
+        }                                   /*else if (opt->type == DHCPV4_OPT_MESSAGE && opt->len == 1) {//请求类型
+                                              request->v4.msgcode = opt->data[0];
+                                          }*/
         else if (otype == DHCPV6_OPT_ORO) { // 请求OPTIONS内容
             reqopts_len = olen;
             BCOPY(odata, reqopts, olen);
