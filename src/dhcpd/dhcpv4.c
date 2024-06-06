@@ -261,6 +261,10 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
         }
 
         if (assigned) {
+            u32 my_leasetime = (a->leasetime > dhcpd_server->leasetime) ? a->leasetime : dhcpd_server->leasetime;
+            if ((request->v4.leasetime == 0) || (my_leasetime > request->v4.leasetime))
+                request->v4.leasetime = my_leasetime;
+
             if (msgcode == DHCPV4_MSG_DISCOVER) {
                 a->flags &= ~OAF_BOUND;
                 request->v4.incl_fr_opt = request->v4.accept_fr_nonce;
@@ -274,7 +278,7 @@ PRIVATE struct vdhcpd_assignment *dhcpv4_lease(packet_process_t *packet_process,
                 } else
                     request->v4.incl_fr_opt = false;
 
-                a->valid_until = (time_t)(now + dhcpd_server->leasetime);
+                a->valid_until = ((request->v4.leasetime == UINT32_MAX) ? 0 : (time_t)(now + request->v4.leasetime));
             }
         } else if ((!assigned) && a) {
             /* Cleanup failed assignment */
@@ -396,7 +400,7 @@ PUBLIC int server4_process(packet_process_t *packet_process)
         realtime_info->v4.gipaddr = req->giaddr;
         BCOPY(&packet_process->macaddr, &realtime_info->v4.macaddr, sizeof(mac_address_t));
 
-         if (reply->v4.msgcode == DHCPV4_MSG_ACK) {
+        if (reply->v4.msgcode == DHCPV4_MSG_ACK) {
             SET_COUNTER(realtime_info->updatetick);
             realtime_info->flags |= RLTINFO_FLAGS_SERVER4;
             if (a->flags & OAF_STATIC)

@@ -364,7 +364,7 @@ PUBLIC int relay6_send_reply_packet(packet_process_t *packet_process)
     char dstip[MINBUFFERLEN];
     inet_ntop(AF_INET6,&pIP6Header->ip6_src , srcip, MINNAMELEN);
     inet_ntop(AF_INET6, &pIP6Header->ip6_dst, dstip, MINNAMELEN);
-    x_log_debug("发送中继报文,srcIP:%s,dstIP:%s",srcip,dstip);
+    x_log_debug("发送中继报文,srcIP:%s,dstIP:%s,ovlan:%d,invlan:%d",srcip,dstip,realtime_info->ovlanid,realtime_info->ivlanid);
     packet_save_log6(packet_process, (struct dhcpv6_client_header *)request->relay_payload, request->v6.msgcode, "发送报文[v6中继][C]");
     return ipc_send_data(packet_process, buffer, length);
 }
