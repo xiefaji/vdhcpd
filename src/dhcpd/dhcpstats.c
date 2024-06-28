@@ -134,6 +134,39 @@ PUBLIC void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const
             a->valid_until = now;
     }
 }
+
+PUBLIC bool release_lease_by_mac(const mac_address_t macaddr, const int ipvsersion)
+{
+    time_t now = vdhcpd_time();
+    server_stats_main_t *sm = &server_stats_main;
+
+    struct key_node *knode = key_first(&sm->key_server_stats);
+    while (knode && knode->data) {
+        dhcpd_server_stats_t *server_stats = (dhcpd_server_stats_t *)knode->data;
+        struct vdhcpd_assignment *a, *n;
+        if (ipvsersion == 4) {
+            // IPv4实时租约
+            list_for_each_entry_safe(a, n, &server_stats->dhcpv4_assignments, head)
+            {
+                if (!BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t))) {
+                    a->valid_until = now;
+                    return 1;
+                }
+            }
+        } else if (ipvsersion == 6) {
+            // IPv6实时租约
+            list_for_each_entry_safe(a, n, &server_stats->dhcpv6_assignments, head)
+            {
+                if (!BCMP(&a->macaddr, &macaddr, sizeof(mac_address_t))) {
+                    a->valid_until = now;
+                    return 1;
+                }
+            }
+        }
+        knode = key_next(knode);
+    }
+    return -1;
+}
 PUBLIC int search_lease_by_mac(mac_address_t mac_addr, int ipversion)
 {
     struct key_tree key_dhcplease;
@@ -172,6 +205,7 @@ PRIVATE void delet_dhcplease(MYDBOP DBHandle, mac_address_t mac_addr, int ipvers
     x_log_debug("删除的MAC:'" MACADDRFMT "'", MACADDRBYTES(mac_addr));
     MyDBOp_ExecSQL(&DBHandle, sql);
 }
+
 PUBLIC void maint_dhcplease_stats()
 {
     char sql[MINBUFFERLEN + 1] = {0};

@@ -89,26 +89,71 @@ PUBLIC void dhcpd_lease_main_check(dhcpd_lease_main_t *staticlease_main)
         knode6 = key_next(knode6);
     }
 }
-
-PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32 serverid/*lineid*/)
+PUBLIC void dhcpd_lease_main_rebind(u16 nLineID, u32 nID, int stack)
 {
-    char sql[MINBUFFERLEN+1]={0};
+    vdhcpd_main_t *vdm = &vdhcpd_main;
+    vdhcpd_cfg_t *cfg_main = vdhcpd_main.cfg_main;
+    struct key_node *knode = key_first(&cfg_main->key_servers);
+    while (knode && knode->data) {
+        dhcpd_server_t *dhcpd_server = knode->data;
+        if (dhcpd_server->nLineID == nLineID)
+            break;
+        knode = key_next(knode);
+    }
+
+    if (knode && knode->data) {
+        dhcpd_server_t *dhcpd_server = (dhcpd_server_t *)knode->data;
+        //加载静态租约
+        dhcpd_lease_main_t *staticlease_main = dhcpd_server->staticlease_main;
+        if (stack == 14) {
+            struct key_node *knode_t = key_rbsearch(&staticlease_main->key_staticlease4, nID);
+            if (knode_t) {
+                dhcpd_staticlease_t *dhcpd_staticlease = knode_t->data;
+                struct key_node *knode1 = key_rbsearch(&staticlease_main->key_staticlease4_mac, dhcpd_staticlease->key.key_value);
+                if (knode1) {
+                    key_rberase(&staticlease_main->key_staticlease4_mac, knode1);
+                }
+                struct key_node *knode2 = key_rbsearch(&staticlease_main->key_staticlease4_ip, dhcpd_staticlease->u.v4.ipaddr.address);
+                if (knode2) {
+                    key_rberase(&staticlease_main->key_staticlease4_ip, knode2);
+                }
+                key_rberase(&staticlease_main->key_staticlease4, knode_t);
+                free(dhcpd_staticlease);
+        
+            }
+        } else if (stack == 15) {
+            struct key_node *knode_t = key_rbsearch(&staticlease_main->key_staticlease6, nID);
+            if (knode_t) {
+                dhcpd_staticlease_t *dhcpd_staticlease = knode_t->data;
+                struct key_node *knode1 = key_rbsearch(&staticlease_main->key_staticlease6_mac, dhcpd_staticlease->key.key_value);
+                if (knode1)
+                    key_rberase(&staticlease_main->key_staticlease6_mac, knode1);
+
+                key_rberase(&staticlease_main->key_staticlease6, knode_t);
+                free(dhcpd_staticlease);
+            }
+        }
+    }
+}
+PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32 serverid /*lineid*/)
+{
+    char sql[MINBUFFERLEN + 1] = {0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpfixed WHERE lineid=%u;", serverid);
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
-        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
-    MYSQLRECORDSET Query={0};
+    MYSQLRECORDSET Query = {0};
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
-        char ipaddr[MINNAMELEN+1]={0};
-        char macaddr[MINNAMELEN+1]={0};
+        char ipaddr[MINNAMELEN + 1] = {0};
+        char macaddr[MINNAMELEN + 1] = {0};
         dhcpd_staticlease_t *dhcpd_staticlease = dhcpd_staticlease_init();
         CSqlRecorDset_GetFieldValue_U32(&Query, "id", &dhcpd_staticlease->nID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_staticlease->nLineID);
@@ -133,25 +178,25 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
     MyDBOp_Destroy(&DBHandle);
 }
 
-PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32 serverid/*lineid*/)
+PRIVATE void staticlease_reload6(dhcpd_lease_main_t *staticlease_main, const u32 serverid /*lineid*/)
 {
-    char sql[MINBUFFERLEN+1]={0};
+    char sql[MINBUFFERLEN + 1] = {0};
     snprintf(sql, MINBUFFERLEN, "SELECT * FROM tbdhcpfixed6 WHERE lineid=%u;", serverid);
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
-        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);
         return;
     }
-    MYSQLRECORDSET Query={0};
+    MYSQLRECORDSET Query = {0};
     CSqlRecorDset_Init(&Query);
     CSqlRecorDset_SetConn(&Query, DBHandle.m_pDB);
     CSqlRecorDset_CloseRec(&Query);
     CSqlRecorDset_ExecSQL(&Query, sql);
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) {
-        char ipaddr[MINNAMELEN+1]={0};
-        char macaddr[MINNAMELEN+1]={0};
+        char ipaddr[MINNAMELEN + 1] = {0};
+        char macaddr[MINNAMELEN + 1] = {0};
         dhcpd_staticlease_t *dhcpd_staticlease = dhcpd_staticlease_init();
         CSqlRecorDset_GetFieldValue_U32(&Query, "id", &dhcpd_staticlease->nID);
         CSqlRecorDset_GetFieldValue_U32(&Query, "lineid", &dhcpd_staticlease->nLineID);
@@ -183,13 +228,13 @@ PUBLIC dhcpd_staticlease_t *staticlease_search4_macaddr(dhcpd_lease_main_t *stat
     BZERO(&key, sizeof(lease_key_t));
     BCOPY(&macaddr, &key.u.macaddr, sizeof(mac_address_t));
     struct key_node *knode = key_rbsearch(&staticlease_main->key_staticlease4_mac, key.key_value);
-    return (knode && knode->data) ? knode->data:NULL;
+    return (knode && knode->data) ? knode->data : NULL;
 }
 
 PUBLIC dhcpd_staticlease_t *staticlease_search4_ipaddr(dhcpd_lease_main_t *staticlease_main, const ip4_address_t ipaddr)
 {
     struct key_node *knode = key_rbsearch(&staticlease_main->key_staticlease4_ip, ipaddr.address);
-    return (knode && knode->data) ? knode->data:NULL;
+    return (knode && knode->data) ? knode->data : NULL;
 }
 
 PUBLIC dhcpd_staticlease_t *staticlease_search6_macaddr(dhcpd_lease_main_t *staticlease_main, const mac_address_t macaddr)
@@ -198,7 +243,7 @@ PUBLIC dhcpd_staticlease_t *staticlease_search6_macaddr(dhcpd_lease_main_t *stat
     BZERO(&key, sizeof(lease_key_t));
     BCOPY(&macaddr, &key.u.macaddr, sizeof(mac_address_t));
     struct key_node *knode = key_rbsearch(&staticlease_main->key_staticlease6_mac, key.key_value);
-    return (knode && knode->data) ? knode->data:NULL;
+    return (knode && knode->data) ? knode->data : NULL;
 }
 
 PUBLIC dhcpd_staticlease_t *staticlease_search6_ipaddr(dhcpd_lease_main_t *staticlease_main, const ip6_address_t ipaddr)

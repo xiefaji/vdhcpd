@@ -142,5 +142,5 @@ PUBLIC_DATA void server_stats_main_maintain();
 PUBLIC_DATA void maint_dhcplease_stats();
 PUBLIC_DATA dhcpd_server_stats_t *server_stats_find(const u32 serverid);
 PUBLIC_DATA void server_stats_release_lease(dhcpd_server_stats_t *server_stats, const mac_address_t macaddr, const int ipv4);
-
+PUBLIC_DATA bool release_lease_by_mac(const mac_address_t macaddr, const int ipvsersion);
 #endif

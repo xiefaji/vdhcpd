@@ -47,6 +47,7 @@ PUBLIC_DATA void dhcpd_lease_main_release(void *p);
 PUBLIC_DATA void dhcpd_lease_main_recycle(void *p, trash_queue_t *pRecycleTrash);
 PUBLIC_DATA void dhcpd_lease_main_reload(dhcpd_lease_main_t *staticlease_main, const u32 serverid);
 PUBLIC_DATA void dhcpd_lease_main_check(dhcpd_lease_main_t *staticlease_main);
+PUBLIC_DATA void dhcpd_lease_main_rebind(u16 nLineID,u32 lineid,int stack);
 PUBLIC_DATA dhcpd_staticlease_t *staticlease_search4_macaddr(dhcpd_lease_main_t *staticlease_main, const mac_address_t macaddr);
 PUBLIC_DATA dhcpd_staticlease_t *staticlease_search4_ipaddr(dhcpd_lease_main_t *staticlease_main, const ip4_address_t ipaddr/*netbit*/);
 PUBLIC_DATA dhcpd_staticlease_t *staticlease_search6_macaddr(dhcpd_lease_main_t *staticlease_main, const mac_address_t macaddr);
