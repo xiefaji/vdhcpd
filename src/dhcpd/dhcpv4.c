@@ -100,7 +100,7 @@ PRIVATE bool dhcpv4_insert_assignment(packet_process_t *packet_process, struct v
     dhcpd_staticlease_t *staticlease = staticlease_search4_ipaddr(dhcpd_server->staticlease_main, addr);
     if (staticlease && BCMP(&staticlease->key.u.macaddr, &packet_process->macaddr, sizeof(mac_address_t)))
         return false;
-
+ 
     list_for_each_entry(c, &server_stats->dhcpv4_assignments, head)
     {
         u32 c_addr = IPV4_NTOHL(c->addr);

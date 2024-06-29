@@ -119,7 +119,6 @@ PUBLIC void dhcpd_lease_main_rebind(u16 nLineID, u32 nID, int stack)
                 }
                 key_rberase(&staticlease_main->key_staticlease4, knode_t);
                 free(dhcpd_staticlease);
-        
             }
         } else if (stack == 15) {
             struct key_node *knode_t = key_rbsearch(&staticlease_main->key_staticlease6, nID);
@@ -160,11 +159,24 @@ PRIVATE void staticlease_reload4(dhcpd_lease_main_t *staticlease_main, const u32
         CSqlRecorDset_GetFieldValue_String(&Query, "hardware", macaddr, MINNAMELEN);
         macaddress_parse(&dhcpd_staticlease->key.u.macaddr, macaddr);
         CSqlRecorDset_GetFieldValue_String(&Query, "sComment", dhcpd_staticlease->szName, MINNAMELEN);
+// CSqlRecorDset_GetFieldValue_String(&Query, "fixedip", ipaddr, MINNAMELEN);
+// inet_pton(AF_INET, ipaddr, &dhcpd_staticlease->u.v4.ipaddr);
+// CSqlRecorDset_GetFieldValue_String(&Query, "fixedgateway", ipaddr, MINNAMELEN);
+// inet_pton(AF_INET, ipaddr, &dhcpd_staticlease->u.v4.gateway);
+#ifdef VERSION_VNAAS
+        u32 ip_addr;
+        u32 ip_gateway;
+
+        CSqlRecorDset_GetFieldValue_U32(&Query, "fixedip", &ip_addr);
+        dhcpd_staticlease->u.v4.ipaddr.address=ntohl(ip_addr);
+        CSqlRecorDset_GetFieldValue_U32(&Query, "fixedgateway", &ip_gateway);
+        dhcpd_staticlease->u.v4.gateway.address=ntohl(ip_gateway);
+#else
         CSqlRecorDset_GetFieldValue_String(&Query, "fixedip", ipaddr, MINNAMELEN);
         inet_pton(AF_INET, ipaddr, &dhcpd_staticlease->u.v4.ipaddr);
         CSqlRecorDset_GetFieldValue_String(&Query, "fixedgateway", ipaddr, MINNAMELEN);
         inet_pton(AF_INET, ipaddr, &dhcpd_staticlease->u.v4.gateway);
-
+#endif
         struct key_node *knode = key_rbinsert(&staticlease_main->key_staticlease4, dhcpd_staticlease->nID, dhcpd_staticlease);
         if (knode) {
             x_log_err("加载静态租约配置[v4]失败, ID冲突[%d].", dhcpd_staticlease->nID);
