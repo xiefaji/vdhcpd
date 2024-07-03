@@ -55,7 +55,9 @@ PUBLIC int relay6_main_start(void *p, trash_queue_t *pRecycleTrash)
         packet_process.data = packets->msg_hdr.msg_iov->iov_base;
         packet_process.data_len = packets->msg_len;
         packet_process.vdm = vdm;
+#ifdef VERSION_VNAAS
         packet_do_dpi(&packet_process);
+#endif // DEBUG
         if (packet_deepin_parse(&packet_process) < 0)
             continue;
 

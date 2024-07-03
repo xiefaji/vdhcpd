@@ -68,7 +68,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     for (i32 idx = 0; idx < CSqlRecorDset_GetRecordCount(&Query); ++idx) { 
         u16 val16;
         u32 val32;
-        char tmpbuffer[MAXNAMELEN + 1] = {0}, exactvlan[MAXNAMELEN + 1] = {0};
+        char tmpbuffer[MINBUFFERLEN + 1] = {0}, exactvlan[MAXNAMELEN + 1] = {0};
 
         dhcpd_server_t *dhcpd_server = dhcpd_server_init();
         dhcpd_server->cfg_main = cfg_main;
@@ -219,7 +219,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
             else
                 dhcpd_server->dhcpv6.prefix_addr.ip_u8[i] = 0;
         }
-          struct key_node *knode = key_rbinsert(&cfg_main->key_servers, dhcpd_server->nID, dhcpd_server);
+        struct key_node *knode = key_rbinsert(&cfg_main->key_servers, dhcpd_server->nID, dhcpd_server);
         if (knode) {
             x_log_err("加载DHCP服务配置失败, ID冲突[%d].", dhcpd_server->nID);
             dhcpd_server_release(dhcpd_server);
@@ -298,9 +298,9 @@ PUBLIC void dhcpd_server_update(void *cfg, trash_queue_t *pRecycleTrash,int sock
         dhcpd_upate_iface_lineip6(dhcpd_server);
         dhcpd_upate_relay4_iface(dhcpd_server);
         dhcpd_upate_relay6_iface(dhcpd_server);
-#ifndef VERSION_VNAAS
+
         send_server_info(dhcpd_server, sockfd_main);
-#endif 
+
         
         knode = key_next(knode);
     }

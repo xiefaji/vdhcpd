@@ -46,14 +46,21 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
         packet_process.data = packets->msg_hdr.msg_iov->iov_base;
         packet_process.data_len = packets->msg_len;
         packet_process.vdm = vdm;
-        packet_do_dpi(&packet_process);
-        packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.dpi.lineid);
-        if (!packet_process.dhcpd_server) {
-            x_log_debug("DHCPv4中继服务查找失败 id:%d", packet_process.realtime_info->lineid);
-            continue; // DHCP服务查找失败
-        }
+
         if (packet_deepin_parse(&packet_process) < 0)
             continue;
+
+#ifdef VERSION_VNAAS
+        packet_do_dpi(&packet_process);
+        packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.dpi.lineid);
+#else
+        packet_process.dhcpd_server = dhcpd_server_search_LineID(vdm->cfg_main, packet_process.realtime_info->lineid);
+#endif // DEBUG
+
+        if (!packet_process.dhcpd_server) {
+            continue; // DHCP服务查找失败
+        }
+ 
 
         // 报文响应
         relay4_send_reply_packet(&packet_process);
