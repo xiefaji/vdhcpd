@@ -63,10 +63,9 @@ PUBLIC int relay4_main_start(void *p, trash_queue_t *pRecycleTrash)
 
 PRIVATE int packet_deepin_parse(packet_process_t *packet_process)
 {
+    dhcp_packet_t *request = &packet_process->request;
 #ifdef VERSION_VNAAS
     int retcode = 0;
-    dhcp_packet_t *request = &packet_process->request;
-
     unsigned char *l3 = packet_process->dpi.l3;
     const u16 l3len = packet_process->dpi.l3len;
 
