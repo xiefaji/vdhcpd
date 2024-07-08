@@ -229,7 +229,7 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
         #endif // DEBUG 
         MyDBOp_Destroy(&DBHandle);
-        return -1;
+        return xTHREAD_DEFAULT_SECOND_INTERVAL;
     }
     u32 stattime; //确保不一直执行SQL
     SET_COUNTER(stattime);

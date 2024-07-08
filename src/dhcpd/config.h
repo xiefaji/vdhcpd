@@ -74,7 +74,7 @@ ALWAYS_INLINE void cfg_get_mysql(cfg_mysql_t *cfg_mysql)
     BZERO(cfg_mysql, sizeof(cfg_mysql_t));
     read_profile_string("mysql", "ip", cfg_mysql->ip, MINNAMELEN, "127.0.0.1", path_cfg.cfgfile);
     cfg_mysql->port = read_profile_int("mysql", "port", 8306, path_cfg.cfgfile);
-    read_profile_string("mysql", "user", cfg_mysql->user, MINNAMELEN, "root", path_cfg.cfgfile);
+    read_profile_string("mysql", "user", cfg_mysql->user, MINNAMELEN, "roott", path_cfg.cfgfile);
     read_profile_string("mysql", "pass", cfg_mysql->pass, MINNAMELEN, "tXkj-8002-vErygood", path_cfg.cfgfile);
     read_profile_string("mysql", "dbname", cfg_mysql->dbname, MINNAMELEN, DEFAULT_DBNAME, path_cfg.cfgfile);
 }
