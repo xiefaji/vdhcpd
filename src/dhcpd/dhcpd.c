@@ -31,8 +31,6 @@ PUBLIC int database_connect(PMYDBOP pDBHandle, const char *dbname)
         // x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return -1;
     } 
-    MyDBOp_ExecSQL_1(pDBHandle, "set names utf8");
-
     return 0;
 }
 
@@ -230,6 +228,7 @@ PRIVATE int vdhcpd_db_start(void *p, trash_queue_t *pRecycleTrassh)
         #ifdef CLIB_DEBUG
         x_log_err("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname); 
         #endif // DEBUG 
+        MyDBOp_Destroy(&DBHandle);
         return -1;
     }
     u32 stattime; //确保不一直执行SQL

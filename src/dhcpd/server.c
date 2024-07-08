@@ -56,6 +56,7 @@ PUBLIC void dhcpd_server_reload(void *cfg)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -240,7 +241,8 @@ PRIVATE void dhcpd_server_reload_serverid(struct key_tree *key_serverid, const u
 
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
-    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+    if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) {
+        MyDBOp_Destroy(&DBHandle); 
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -375,6 +377,7 @@ PRIVATE void dhcpd_upate_iface(dhcpd_server_t *dhcpd_server)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -426,6 +429,7 @@ PRIVATE void dhcpd_upate_iface_lineip(dhcpd_server_t *dhcpd_server)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -515,6 +519,7 @@ PRIVATE void dhcpd_upate_iface_lineip_all(dhcpd_server_t *dhcpd_server, trash_qu
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -570,6 +575,7 @@ PRIVATE void dhcpd_upate_iface_lineip6(dhcpd_server_t *dhcpd_server)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -621,6 +627,7 @@ PRIVATE void dhcpd_upate_relay4_iface(dhcpd_server_t *dhcpd_server)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }
@@ -663,6 +670,7 @@ PRIVATE void dhcpd_upate_relay6_iface(dhcpd_server_t *dhcpd_server)
     MYDBOP DBHandle;
     // MyDBOp_Init(&DBHandle);
     if (database_connect(&DBHandle, cfg_mysql.dbname) < 0) { 
+        MyDBOp_Destroy(&DBHandle);
         x_log_debug("%s:%d 数据库[%s:%d %s]连接失败.", __FUNCTION__, __LINE__, cfg_mysql.ip, cfg_mysql.port, cfg_mysql.dbname);  
         return;
     }

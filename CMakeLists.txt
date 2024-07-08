@@ -2,10 +2,12 @@
 cmake_minimum_required(VERSION 3.0)
 
 # 设置项目名称
-project(vdhcpd)
-# project(xsdhcp)
+project(xsdhcp)
 # 开启头定义使用新架构
-add_definitions(-DVERSION_VNAAS)
+
+
+# project(vdhcpd)
+# add_definitions(-DVERSION_VNAAS)
  
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LC)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UP)
@@ -27,18 +29,18 @@ elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "gcov")
 endif()
 
 
-# option(ENABLE_SANITIZE_ADDR "Enable Address Sanitizer" OFF)
-# set(SANITIZE_ADDR_OPTIONS
-#     "unmap_shaw_on_exit=1:disable_coredump=0:abort_on_error=1:detect_leaks=0"
-#     CACHE 
-#     STRING "Address sanitizer arguments"
-# )
+option(ENABLE_SANITIZE_ADDR "Enable Address Sanitizer" on)
+set(SANITIZE_ADDR_OPTIONS
+    "unmap_shaw_on_exit=1:disable_coredump=0:abort_on_error=1:detect_leaks=0"
+    CACHE 
+    STRING "Address sanitizer arguments"
+)
 
-# if (ENABLE_SANITIZE_ADDR)
-#     message(STATUS "Enable Address Sanitizer")
-#     add_compile_options(-fsanitize=address)
-#     add_link_options(-fsanitize=address)
-# endif()
+if (ENABLE_SANITIZE_ADDR)
+    message(STATUS "Enable Address Sanitizer")
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
 
 # # 设置编译选项
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -Wno-unused ")
