@@ -30,8 +30,6 @@ PUBLIC bool MyDBOp_ReOpenDB(PMYDBOP pMyDB)
 
 PUBLIC bool MyDBOp_OpenDB(PMYDBOP pMyDB,const char *username,const char *password,const char *dbname,const char *serverip,const unsigned short serverport)
 {
-    if(!pMyDB)
-        return 0;
     pMyDB->m_pDB = (PMYSQLBASE)xMALLOC(sizeof(MYSQLBASE));//new CSqlDataBase;
     memset(pMyDB->m_pDB, 0, sizeof(MYSQLBASE));
     bool bRet = MysqlBase_OpenDB(pMyDB->m_pDB,username,password,dbname,serverip,serverport);//m_pDB->OpenDB(pUser,pPassword,pDBName,pSvrIP,nPort);
