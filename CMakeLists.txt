@@ -1,13 +1,12 @@
 # 设置 CMake 的最低要求版本
 cmake_minimum_required(VERSION 3.0)
 
-# 设置项目名称
-project(xsdhcp)
+
+# project(xsdhcp)
+
 # 开启头定义使用新架构
-
-
-# project(vdhcpd)
-# add_definitions(-DVERSION_VNAAS)
+project(vdhcpd)
+add_definitions(-DVERSION_VNAAS)
  
 string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_LC)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UP)
@@ -17,8 +16,9 @@ if (${CMAKE_BUILD_TYPE_LC} MATCHES "release")
   add_compile_definitions(_FORTIFY_SOURCE=2) 
 elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "debug")
   message(STATUS "-- Build Debug")
-  add_compile_options(-g -O0 -fstack-protector -fno-common)
+  add_compile_options(-g -O0 -fstack-protector -fno-common -fsanitize=address)
   add_compile_definitions(CLIB_DEBUG)
+  add_link_options(-fsanitize=address)
 elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "coverity")
   add_compile_options(-g -O0)
   add_compile_definitions(__COVERITY__)
@@ -29,18 +29,7 @@ elseif (${CMAKE_BUILD_TYPE_LC} MATCHES "gcov")
 endif()
 
 
-option(ENABLE_SANITIZE_ADDR "Enable Address Sanitizer" on)
-set(SANITIZE_ADDR_OPTIONS
-    "unmap_shaw_on_exit=1:disable_coredump=0:abort_on_error=1:detect_leaks=0"
-    CACHE 
-    STRING "Address sanitizer arguments"
-)
-
-if (ENABLE_SANITIZE_ADDR)
-    message(STATUS "Enable Address Sanitizer")
-    add_compile_options(-fsanitize=address)
-    add_link_options(-fsanitize=address)
-endif()
+ 
 
 # # 设置编译选项
 # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -Wno-unused ")

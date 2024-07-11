@@ -8,6 +8,7 @@
         "unordered_set": "c",
         "string_view": "c",
         "un.h": "c",
-        "inifile.h": "c"
+        "inifile.h": "c",
+        "types.h": "c"
     }
 }
